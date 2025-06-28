@@ -5,7 +5,12 @@ use human_panic::setup_panic;
 
 fn main() -> Result<()> {
     bootstrap(|| {
-        println!("Henlo world (:");
+        println!(r"
+___/|       
+\ * ~~~     Hi!
+ ≈≈_ __     I'm here to help with your timesheets
+    \  
+");
         Ok(())
     })
 }

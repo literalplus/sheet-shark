@@ -1,3 +1,15 @@
 # sheet-shark
 
-TUI application that helps with timesheets
+<!--
+ ___/|                    ___/|
+ \ * ~~~~\____/           \ *  
+  ≈≈_ ____√~~~\            ≈≈_ 
+     \                         
+-->
+
+```
+___/|       
+\ * ~~~
+ ≈≈_ __     Funny CLI fish to help with timesheets 
+    \  
+```
