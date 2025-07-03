@@ -1,11 +1,12 @@
 [package]
-name = "sheet-shark"
-version = "0.1.0"
-edition = "2024"
-description = " Funny CLI fish to help with timesheets "
-authors = ["Philipp Nowak <sheet-shark@lit.plus>"]
-build = "build.rs"
-repository = "https://github.com/literalplus/sheet-shark"
+name         = "sheet-shark"
+version      = "0.1.0"
+edition      = "2024"
+description  = " Funny CLI fish to help with timesheets "
+authors      = ["Philipp Nowak <sheet-shark@lit.plus>"]
+build        = "build.rs"
+repository   = "https://github.com/literalplus/sheet-shark"
+rust-version = "1.85.0"
 
 [dependencies]
 better-panic = "0.3.0"
@@ -41,5 +42,5 @@ tracing-error = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde"] }
 
 [build-dependencies]
-anyhow = "1.0.90"
+anyhow     = "1.0.90"
 vergen-gix = { version = "1.0.2", features = ["build", "cargo"] }

@@ -1,6 +1,6 @@
 # sheet-shark
 
-[![CI](https://github.com//sheet-shark/workflows/CI/badge.svg)](https://github.com/literalplus/sheet-shark/actions)
+[![CI](https://github.com/literalplus/sheet-shark/workflows/CI/badge.svg)](https://github.com/literalplus/sheet-shark/actions)
 
 ```
 ___/|       
