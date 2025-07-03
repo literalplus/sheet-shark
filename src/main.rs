@@ -40,5 +40,5 @@ fn bootstrap(fn_do_run: fn() -> Result<()>) -> Result<()> {
     let result = fn_do_run();
     runtime.shutdown_timeout(Duration::from_secs(5));
 
-    return result;
+    result
 }
