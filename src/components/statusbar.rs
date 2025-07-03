@@ -1,6 +1,6 @@
 use color_eyre::Result;
 use ratatui::{
-    layout::Rect, style::Stylize, text::{Span, Text}, widgets::{Block, BorderType, Borders, Padding}, Frame
+    layout::{Alignment, Rect}, style::Stylize, text::{Span, Text}, widgets::{Block, BorderType, Borders, Padding}, Frame
 };
 
 use super::Component;
@@ -42,7 +42,8 @@ impl Component for StatusBar {
             .borders(!Borders::BOTTOM)
             .border_type(BorderType::Rounded)
             .padding(Padding::horizontal(2))
-            .title(self.status_line.clone());
+            .title(self.status_line.clone())
+            .title_alignment(Alignment::Center);
         frame.render_widget(&block, area);
 
         let mut keys_text = Text::default();
