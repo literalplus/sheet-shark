@@ -1,6 +1,10 @@
 use color_eyre::Result;
 use ratatui::{
-    layout::{Alignment, Rect}, style::Stylize, text::{Span, Text}, widgets::{Block, BorderType, Borders, Padding}, Frame
+    Frame,
+    layout::{Alignment, Rect},
+    style::Stylize,
+    text::{Span, Text},
+    widgets::{Block, BorderType, Borders, Padding},
 };
 
 use super::Component;
@@ -48,7 +52,7 @@ impl Component for StatusBar {
 
         let mut keys_text = Text::default();
         for key in self.keys.iter() {
-            keys_text.push_span(Span::from(format!("<{}> ", key.key).blue().bold()));
+            keys_text.push_span(format!("<{}> ", key.key).blue().bold());
             keys_text.push_span(Span::from(key.text.clone()));
         }
         frame.render_widget(keys_text, block.inner(area));

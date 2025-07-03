@@ -1,5 +1,5 @@
 use color_eyre::Result;
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
@@ -13,13 +13,26 @@ pub struct Home {
 
 impl Default for Home {
     fn default() -> Self {
-        Self { command_tx: Default::default(), config: Default::default(), items: vec![
-            Data {start_time: "0915".into(), ticket: "(W)SCRUM-17".into(), text: "daily".into(), duration: "15m".into()},
-            Data {start_time: "0930".into(), ticket: "(W)XAMPL-568".into(), text: "tech analysis".into(), duration: "2h".into()},
-        ] }
+        Self {
+            command_tx: Default::default(),
+            config: Default::default(),
+            items: vec![
+                Data {
+                    start_time: "0915".into(),
+                    ticket: "(W)SCRUM-17".into(),
+                    text: "daily".into(),
+                    duration: "15m".into(),
+                },
+                Data {
+                    start_time: "0930".into(),
+                    ticket: "(W)XAMPL-568".into(),
+                    text: "tech analysis".into(),
+                    duration: "2h".into(),
+                },
+            ],
+        }
     }
 }
-
 
 struct Data {
     pub start_time: String,
@@ -64,24 +77,24 @@ impl Component for Home {
         let block = Block::new()
             .borders(!Borders::BOTTOM)
             .border_type(BorderType::Rounded)
-            .padding(Padding::horizontal(2))
             .title("📅 1989-12-13");
         frame.render_widget(&block, area);
         let area = block.inner(area);
 
-        let header = ["Star", "Ticket", "Text", "Duration"]
+        let header = ["", "Ticket", "Text", "Duration"]
             .into_iter()
             .map(Cell::from)
             .collect::<Row>()
-            .height(1);
+            .height(1)
+            .bg(tailwind::INDIGO.c900);
         let rows = self.items.iter().enumerate().map(|(i, data)| {
             let color = match i % 2 {
-                0 => style::palette::tailwind::SLATE.c950,
-                _ => style::palette::tailwind::SLATE.c900,
+                0 => tailwind::SLATE.c950,
+                _ => tailwind::SLATE.c900,
             };
             let item = data.ref_array();
             item.into_iter()
-                .map(|content| Cell::from(Text::from(format!("{content}"))))
+                .map(|content| Cell::from(Text::from(content.to_string())))
                 .collect::<Row>()
                 .style(Style::new().bg(color))
         });
@@ -90,9 +103,9 @@ impl Component for Home {
             [
                 // + 1 is for padding.
                 Constraint::Length(5),
-                Constraint::Fill(3),
-                Constraint::Fill(10),
-                Constraint::Length(5),
+                Constraint::Max(20),
+                Constraint::Fill(1),
+                Constraint::Max(10),
             ],
         )
         .header(header);

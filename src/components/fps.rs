@@ -74,14 +74,15 @@ impl Component for FpsCounter {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
-        let [top, _] = Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(area);
+        let [area, _] = Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(area);
+        let [area, _] = Layout::horizontal([Constraint::Fill(1), Constraint::Max(2)]).areas(area);
         let message = format!(
             "{:.2} ticks/sec, {:.2} FPS",
             self.ticks_per_second, self.frames_per_second
         );
         let span = Span::styled(message, Style::new().dim());
         let paragraph = Paragraph::new(span).right_aligned();
-        frame.render_widget(paragraph, top);
+        frame.render_widget(paragraph, area);
         Ok(())
     }
 }

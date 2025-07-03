@@ -13,9 +13,9 @@ mod cli;
 mod components;
 mod config;
 mod errors;
+mod layout;
 mod logging;
 mod tui;
-mod layout;
 
 fn main() -> Result<()> {
     bootstrap(|| {

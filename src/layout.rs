@@ -2,8 +2,7 @@ use lazy_static::lazy_static;
 use ratatui::layout::{Constraint, Layout, Rect};
 
 lazy_static! {
-    static ref MAIN_LAYOUT: Layout =
-        Layout::vertical([Constraint::Min(5), Constraint::Length(2)]);
+    static ref MAIN_LAYOUT: Layout = Layout::vertical([Constraint::Min(5), Constraint::Length(2)]);
 }
 
 pub enum LayoutSlot {
@@ -12,5 +11,5 @@ pub enum LayoutSlot {
 }
 
 pub fn main_vert(slot: LayoutSlot, area: Rect) -> Rect {
-    return MAIN_LAYOUT.areas::<2>(area)[slot as usize]
+    MAIN_LAYOUT.areas::<2>(area)[slot as usize]
 }
