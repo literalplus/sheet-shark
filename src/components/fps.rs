@@ -26,12 +26,6 @@ pub struct FpsCounter {
 
 impl Default for FpsCounter {
     fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl FpsCounter {
-    pub fn new() -> Self {
         Self {
             last_tick_update: Instant::now(),
             tick_count: 0,
@@ -41,7 +35,9 @@ impl FpsCounter {
             frames_per_second: 0.0,
         }
     }
+}
 
+impl FpsCounter {
     fn app_tick(&mut self) -> Result<()> {
         self.tick_count += 1;
         let now = Instant::now();

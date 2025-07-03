@@ -3,18 +3,12 @@ use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
-use crate::{action::Action, config::Config};
+use crate::{action::Action, config::Config, layout::LayoutSlot};
 
 #[derive(Default)]
 pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
-}
-
-impl Home {
-    pub fn new() -> Self {
-        Self::default()
-    }
 }
 
 impl Component for Home {
@@ -42,6 +36,7 @@ impl Component for Home {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
+        let area = crate::layout::main_vert(LayoutSlot::MainCanvas, area);
         frame.render_widget(Paragraph::new("hello world"), area);
         Ok(())
     }
