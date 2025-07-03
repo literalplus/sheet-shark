@@ -1,32 +1,40 @@
 use std::time::Duration;
 
-use anyhow::{Context, Result};
-use human_panic::setup_panic;
+use clap::Parser;
+use cli::Cli;
+use color_eyre::eyre::{Result, WrapErr};
+use futures::executor;
+
+use crate::app::App;
+
+mod action;
+mod app;
+mod cli;
+mod components;
+mod config;
+mod errors;
+mod logging;
+mod tui;
 
 fn main() -> Result<()> {
     bootstrap(|| {
-        println!(r"
-___/|       
-\ * ~~~     Hi!
- ≈≈_ __     I'm here to help with your timesheets
-    \  
-");
+        let args = Cli::parse();
+        let mut app = App::new(args.tick_rate, args.frame_rate)?;
+
+        executor::block_on(app.run())?;
+
         Ok(())
     })
 }
 
 fn bootstrap(fn_do_run: fn() -> Result<()>) -> Result<()> {
-    setup_panic!();
-    if let Err(env_err) = dotenvy::dotenv() {
-        if !env_err.not_found() {
-            return Err(env_err).with_context(|| "Failed to load `.env` file");
-        }
-    }
+    crate::errors::init()?;
+    crate::logging::init()?;
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
-        .with_context(|| "Failed to start Tokio runtime")?;
+        .wrap_err_with(|| "Failed to start Tokio runtime")?;
     let _guard = runtime.enter();
 
     let result = fn_do_run();

@@ -1,11 +1,6 @@
 # sheet-shark
 
-<!--
- ___/|                    ___/|
- \ * ~~~~\____/           \ *  
-  ≈≈_ ____√~~~\            ≈≈_ 
-     \                         
--->
+[![CI](https://github.com//sheet-shark/workflows/CI/badge.svg)](https://github.com/literalplus/sheet-shark/actions)
 
 ```
 ___/|       
