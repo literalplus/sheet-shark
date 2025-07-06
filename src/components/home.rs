@@ -1,16 +1,24 @@
 use color_eyre::Result;
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{KeyEvent, KeyEventKind};
 use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
-use crate::{action::Action, config::Config, layout::LayoutSlot};
+use crate::{
+    action::Action,
+    components::home::editing::{EditMode, EditModeBehaviour},
+    config::Config,
+    layout::LayoutSlot,
+};
+
+mod editing;
 
 pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     table_state: TableState,
     items: Vec<Data>,
+    edit_mode: EditMode,
 }
 
 impl Default for Home {
@@ -33,27 +41,8 @@ impl Default for Home {
                     duration: "2h".into(),
                 },
             ],
+            edit_mode: EditMode::from(editing::Select::default()),
         }
-    }
-}
-
-impl Home {
-    fn next_row(&mut self) {
-        self.table_state.select_next();
-        //self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
-    }
-
-    fn previous_row(&mut self) {
-        self.table_state.select_previous();
-        //self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
-    }
-
-    pub fn next_column(&mut self) {
-        self.table_state.select_next_column();
-    }
-
-    pub fn previous_column(&mut self) {
-        self.table_state.select_previous_column();
     }
 }
 
@@ -81,31 +70,11 @@ impl Component for Home {
         Ok(())
     }
 
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        match action {
-            Action::Tick => {
-                // add any logic here that should run on every tick
-            }
-            Action::Render => {
-                // add any logic here that should run on every render
-            }
-            _ => {}
-        }
-        Ok(None)
-    }
-
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        if key.kind == KeyEventKind::Press {
-            match key.code {
-                KeyCode::Down => self.next_row(),
-                KeyCode::Up => self.previous_row(),
-                KeyCode::Left => self.previous_column(),
-                KeyCode::Right => self.next_column(),
-                KeyCode::Esc => self.table_state.select(None),
-                _ => {}
-            }
+        if key.kind != KeyEventKind::Press {
+            return Ok(None);
         }
-        return Ok(None);
+        self.edit_mode.key_event_handler()(self, key)
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
