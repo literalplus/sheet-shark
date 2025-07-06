@@ -1,4 +1,5 @@
 use color_eyre::Result;
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -8,6 +9,7 @@ use crate::{action::Action, config::Config, layout::LayoutSlot};
 pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
+    table_state: TableState,
     items: Vec<Data>,
 }
 
@@ -16,6 +18,7 @@ impl Default for Home {
         Self {
             command_tx: Default::default(),
             config: Default::default(),
+            table_state: TableState::default(),
             items: vec![
                 Data {
                     start_time: "0915".into(),
@@ -31,6 +34,26 @@ impl Default for Home {
                 },
             ],
         }
+    }
+}
+
+impl Home {
+    fn next_row(&mut self) {
+        self.table_state.select_next();
+        //self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
+    }
+
+    fn previous_row(&mut self) {
+        self.table_state.select_previous();
+        //self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
+    }
+
+    pub fn next_column(&mut self) {
+        self.table_state.select_next_column();
+    }
+
+    pub fn previous_column(&mut self) {
+        self.table_state.select_previous_column();
     }
 }
 
@@ -71,6 +94,20 @@ impl Component for Home {
         Ok(None)
     }
 
+    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        if key.kind == KeyEventKind::Press {
+            match key.code {
+                KeyCode::Down => self.next_row(),
+                KeyCode::Up => self.previous_row(),
+                KeyCode::Left => self.previous_column(),
+                KeyCode::Right => self.next_column(),
+                KeyCode::Esc => self.table_state.select(None),
+                _ => {}
+            }
+        }
+        return Ok(None);
+    }
+
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
         let area = crate::layout::main_vert(LayoutSlot::MainCanvas, area);
 
@@ -108,8 +145,10 @@ impl Component for Home {
                 Constraint::Max(10),
             ],
         )
-        .header(header);
-        frame.render_widget(table, area);
+        .header(header)
+        .row_highlight_style(Style::from(Modifier::REVERSED))
+        .cell_highlight_style(Style::from(Modifier::BOLD));
+        frame.render_stateful_widget(table, area, &mut self.table_state);
 
         Ok(())
     }
