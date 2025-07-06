@@ -1,92 +1,78 @@
-use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use enum_dispatch::enum_dispatch;
 
-use crate::action::Action;
+use crate::components::home::{action::HomeAction, state::HomeState};
 
-use super::Home;
-
-#[enum_dispatch(EditMode)]
+#[enum_dispatch]
 pub trait EditModeBehaviour {
-    fn key_event_handler(&self) -> fn(home: &mut Home, key: KeyEvent) -> Result<Option<Action>>;
+    fn handle_key_event(&self, state: &mut HomeState, key: KeyEvent) -> HomeAction;
 }
 
 #[derive(Default)]
 pub struct Select {}
 
-impl Select {
-    fn handle_key_event(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
+impl EditModeBehaviour for Select {
+    fn handle_key_event(&self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
         match key.code {
             KeyCode::Up | KeyCode::Down => {
                 if key.code == KeyCode::Up {
-                    home.table_state.select_previous()
+                    state.table.select_previous()
                 } else {
-                    home.table_state.select_next()
+                    state.table.select_next()
                 }
-                if home.table_state.selected_column() == None {
-                    home.table_state.select_first_column();
+                if state.table.selected_column() == None {
+                    state.table.select_first_column();
                 }
             }
-            KeyCode::Left => home.table_state.select_previous_column(),
-            KeyCode::Right => home.table_state.select_next_column(),
-            KeyCode::Esc => home.table_state.select(None),
-            KeyCode::Char(' ') => match home.table_state.selected_column() {
-                Some(0) => {
-                    home.edit_mode = EditMode::from(Time::default());
-                    return Ok(Some(Action::SetStatusLine("Here u go ⌚⌚".into())));
-                }
-                _ => {
-                    return Ok(Some(Action::SetStatusLine(
-                        "You can't edit this 🔪🔪".into(),
-                    )));
-                }
-            },
+            KeyCode::Left => state.table.select_previous_column(),
+            KeyCode::Right => state.table.select_next_column(),
+            KeyCode::Esc => state.table.select(None),
+            KeyCode::Char(' ') => return HomeAction::EnterEdit,
             _ => {}
         }
-        Ok(None)
-    }
-}
-
-impl EditModeBehaviour for Select {
-    fn key_event_handler(&self) -> fn(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
-        Self::handle_key_event
+        HomeAction::None
     }
 }
 
 #[derive(Default)]
 pub struct Time {}
 
-impl Time {
-    fn handle_key_event(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
+impl EditModeBehaviour for Time {
+    fn handle_key_event(&self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
         match key.code {
-            KeyCode::Esc => {
-                home.edit_mode = EditMode::from(Select::default());
-                return Ok(Some(Action::SetStatusLine("ok then not! 👍👍".into())));
-            }
+            KeyCode::Esc => return HomeAction::ExitEdit,
             KeyCode::Enter => {
-                home.edit_mode = EditMode::from(Select::default());
-                if let Some(idx) = home.table_state.selected() {
-                    home.items[idx].start_time = "1456".into();
+                if let Some(idx) = state.table.selected() {
+                    state.items[idx].start_time = "1456".into();
                 }
-                return Ok(Some(Action::SetStatusLine("".into())));
+                return HomeAction::ExitEdit;
             }
             KeyCode::Char(_) => {
                 todo!()
             }
             _ => {}
         }
-        Ok(None)
+        HomeAction::None
     }
 }
 
-impl EditModeBehaviour for Time {
-    fn key_event_handler(&self) -> fn(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
-        Self::handle_key_event
-    }
-}
-
-#[enum_dispatch]
+#[enum_dispatch(EditModeBehaviour)]
 pub enum EditMode {
     Select,
     Time,
+}
+
+impl Default for EditMode {
+    fn default() -> Self {
+        EditMode::from(Select::default())
+    }
+}
+
+impl EditMode {
+    pub fn from_column_num(idx: usize) -> Option<Self> {
+        Some(match idx {
+            0 => EditMode::from(Time::default()),
+            _ => return None,
+        })
+    }
 }

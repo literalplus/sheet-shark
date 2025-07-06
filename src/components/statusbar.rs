@@ -24,7 +24,7 @@ impl Default for StatusBar {
     fn default() -> Self {
         Self {
             status_line: "Hello, world!".to_owned(),
-            keys: vec![RelevantKey::new("q", "Quit")],
+            keys: vec![RelevantKey::new("q", "Quit"), RelevantKey::new("Space", "Edit cell")],
         }
     }
 }
@@ -51,7 +51,13 @@ impl Component for StatusBar {
         frame.render_widget(&block, area);
 
         let mut keys_text = Text::default();
+        let mut first = true;
         for key in self.keys.iter() {
+            if !first {
+                keys_text.push_span("  ");
+            } else {
+                first = false;
+            }
             keys_text.push_span(format!("<{}> ", key.key).blue().bold());
             keys_text.push_span(Span::from(key.text.clone()));
         }

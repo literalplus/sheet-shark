@@ -1,70 +1,38 @@
 use color_eyre::Result;
 use crossterm::event::{KeyEvent, KeyEventKind};
 use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
-use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
 use crate::{
     action::Action,
-    components::home::editing::{EditMode, EditModeBehaviour},
+    components::home::{
+        action::HomeAction,
+        editing::{EditMode, EditModeBehaviour},
+        state::HomeState,
+    },
     config::Config,
     layout::LayoutSlot,
 };
 
 mod editing;
+mod state;
+mod action {
+    pub enum HomeAction {
+        None,
+        EnterEdit,
+        ExitEdit,
+    }
+}
 
+#[derive(Default)]
 pub struct Home {
-    command_tx: Option<UnboundedSender<Action>>,
     config: Config,
-    table_state: TableState,
-    items: Vec<Data>,
+
     edit_mode: EditMode,
-}
-
-impl Default for Home {
-    fn default() -> Self {
-        Self {
-            command_tx: Default::default(),
-            config: Default::default(),
-            table_state: TableState::default(),
-            items: vec![
-                Data {
-                    start_time: "0915".into(),
-                    ticket: "(W)SCRUM-17".into(),
-                    text: "daily".into(),
-                    duration: "15m".into(),
-                },
-                Data {
-                    start_time: "0930".into(),
-                    ticket: "(W)XAMPL-568".into(),
-                    text: "tech analysis".into(),
-                    duration: "2h".into(),
-                },
-            ],
-            edit_mode: EditMode::from(editing::Select::default()),
-        }
-    }
-}
-
-struct Data {
-    pub start_time: String,
-    pub ticket: String,
-    pub text: String,
-    pub duration: String,
-}
-
-impl Data {
-    const fn ref_array(&self) -> [&String; 4] {
-        [&self.start_time, &self.ticket, &self.text, &self.duration]
-    }
+    state: HomeState,
 }
 
 impl Component for Home {
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
-        self.command_tx = Some(tx);
-        Ok(())
-    }
-
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         self.config = config;
         Ok(())
@@ -74,7 +42,29 @@ impl Component for Home {
         if key.kind != KeyEventKind::Press {
             return Ok(None);
         }
-        self.edit_mode.key_event_handler()(self, key)
+        match self.edit_mode.handle_key_event(&mut self.state, key) {
+            HomeAction::EnterEdit => {
+                match self
+                    .state
+                    .table
+                    .selected_column()
+                    .and_then(|idx| EditMode::from_column_num(idx))
+                {
+                    Some(it) => {
+                        self.edit_mode = it;
+                        return Ok(Some(Action::SetStatusLine("⌚⌚⌚".into())));
+                    }
+                    None => {
+                        return Ok(Some(Action::SetStatusLine(
+                            "Can't edit this! ⛔⛔⛔".into(),
+                        )));
+                    }
+                }
+            }
+            HomeAction::ExitEdit => self.edit_mode = EditMode::default(),
+            HomeAction::None => {}
+        }
+        Ok(None)
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
@@ -93,7 +83,7 @@ impl Component for Home {
             .collect::<Row>()
             .height(1)
             .bg(tailwind::INDIGO.c900);
-        let rows = self.items.iter().enumerate().map(|(i, data)| {
+        let rows = self.state.items.iter().enumerate().map(|(i, data)| {
             let color = match i % 2 {
                 0 => tailwind::SLATE.c950,
                 _ => tailwind::SLATE.c900,
@@ -117,7 +107,7 @@ impl Component for Home {
         .header(header)
         .row_highlight_style(Style::from(Modifier::REVERSED))
         .cell_highlight_style(Style::from(Modifier::BOLD));
-        frame.render_stateful_widget(table, area, &mut self.table_state);
+        frame.render_stateful_widget(table, area, &mut self.state.table);
 
         Ok(())
     }
