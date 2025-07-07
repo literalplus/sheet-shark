@@ -1,5 +1,8 @@
 use chrono::NaiveTime;
-use ratatui::{text::Text, widgets::{Row, TableState}};
+use ratatui::{
+    text::Text,
+    widgets::{Row, TableState},
+};
 
 pub struct TimeItem {
     pub start_time: NaiveTime,

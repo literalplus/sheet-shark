@@ -24,7 +24,10 @@ impl Default for StatusBar {
     fn default() -> Self {
         Self {
             status_line: "Hello, world!".to_owned(),
-            keys: vec![RelevantKey::new("q", "Quit"), RelevantKey::new("Space", "Edit cell")],
+            keys: vec![
+                RelevantKey::new("q", "Quit"),
+                RelevantKey::new("Space", "Edit cell"),
+            ],
         }
     }
 }
