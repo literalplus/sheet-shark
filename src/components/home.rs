@@ -21,6 +21,7 @@ mod action {
         None,
         EnterEdit,
         ExitEdit,
+        SetStatusLine(String),
     }
 }
 
@@ -48,7 +49,7 @@ impl Component for Home {
                     .state
                     .table
                     .selected_column()
-                    .and_then(|idx| EditMode::from_column_num(idx))
+                    .and_then(|idx| EditMode::from_column_num(idx, &self.state))
                 {
                     Some(it) => {
                         self.edit_mode = it;
@@ -62,6 +63,7 @@ impl Component for Home {
                 }
             }
             HomeAction::ExitEdit => self.edit_mode = EditMode::default(),
+            HomeAction::SetStatusLine(msg) => return Ok(Some(Action::SetStatusLine(msg))),
             HomeAction::None => {}
         }
         Ok(None)
@@ -83,16 +85,17 @@ impl Component for Home {
             .collect::<Row>()
             .height(1)
             .bg(tailwind::INDIGO.c900);
-        let rows = self.state.items.iter().enumerate().map(|(i, data)| {
+        let rows = self.state.items.iter().enumerate().map(|(i, item)| {
             let color = match i % 2 {
                 0 => tailwind::SLATE.c950,
                 _ => tailwind::SLATE.c900,
             };
-            let item = data.ref_array();
-            item.into_iter()
-                .map(|content| Cell::from(Text::from(content.to_string())))
-                .collect::<Row>()
-                .style(Style::new().bg(color))
+            let row = if Some(i) == self.state.table.selected() {
+                self.edit_mode.style_selected_item(item)
+            } else {
+                item.as_row()
+            };
+            row.style(Style::new().bg(color))
         });
         let table = Table::new(
             rows,
@@ -107,8 +110,9 @@ impl Component for Home {
         .header(header)
         .row_highlight_style(Style::from(Modifier::REVERSED))
         .cell_highlight_style(Style::from(Modifier::BOLD));
-        frame.render_stateful_widget(table, area, &mut self.state.table);
+        let table = self.edit_mode.style_table(table);
 
+        frame.render_stateful_widget(table, area, &mut self.state.table);
         Ok(())
     }
 }
