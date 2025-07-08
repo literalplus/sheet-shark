@@ -1,4 +1,7 @@
+use std::time::Duration;
+
 use chrono::NaiveTime;
+use humantime::{format_duration, parse_duration};
 use ratatui::{
     text::Text,
     widgets::{Row, TableState},
@@ -7,8 +10,8 @@ use ratatui::{
 pub struct TimeItem {
     pub start_time: NaiveTime,
     pub ticket: String,
-    pub text: String,
-    pub duration: String,
+    pub description: String,
+    pub duration: Duration,
 }
 
 impl TimeItem {
@@ -21,8 +24,8 @@ impl TimeItem {
         [
             Text::from(self.start_time.format("%H:%M").to_string()),
             Text::from(&self.ticket as &str),
-            Text::from(&self.text as &str),
-            Text::from(&self.duration as &str),
+            Text::from(&self.description as &str),
+            Text::from(format!("{}", format_duration(self.duration))),
         ]
     }
 }
@@ -40,14 +43,14 @@ impl Default for HomeState {
                 TimeItem {
                     start_time: NaiveTime::from_hms_opt(9, 15, 0).unwrap(),
                     ticket: "(W)SCRUM-17".into(),
-                    text: "daily".into(),
-                    duration: "15m".into(),
+                    description: "daily".into(),
+                    duration: parse_duration("15m").unwrap(),
                 },
                 TimeItem {
                     start_time: NaiveTime::from_hms_opt(9, 30, 0).unwrap(),
                     ticket: "(W)XAMPL-568".into(),
-                    text: "tech analysis".into(),
-                    duration: "2h".into(),
+                    description: "tech analysis".into(),
+                    duration: parse_duration("90m").unwrap(),
                 },
             ],
         }
@@ -56,12 +59,12 @@ impl Default for HomeState {
 
 impl HomeState {
     pub fn expect_selected_item(&self) -> &TimeItem {
-        let idx = self.table.selected().expect("a time item to be selected");
+        let idx = self.table.selected().unwrap_or(0);
         self.items.get(idx).expect("the selected item to exist")
     }
 
     pub fn expect_selected_item_mut(&mut self) -> &mut TimeItem {
-        let idx = self.table.selected().expect("a time item to be selected");
+        let idx = self.table.selected().unwrap_or(0);
         self.items.get_mut(idx).expect("the selected item to exist")
     }
 }

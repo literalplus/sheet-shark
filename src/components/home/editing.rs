@@ -1,114 +1,28 @@
-use chrono::NaiveTime;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyEvent;
 use enum_dispatch::enum_dispatch;
-use ratatui::{
-    style::{Modifier, Style},
-    text::Text,
-    widgets::{Row, Table},
-};
+use ratatui::widgets::{Row, Table};
 
 use crate::components::home::{
     action::HomeAction,
     state::{HomeState, TimeItem},
 };
 
-#[enum_dispatch]
-pub trait EditModeBehaviour {
-    fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction;
-    fn style_table<'a>(&self, table: Table<'a>) -> Table<'a>;
-    fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
-        item.as_row()
-    }
-}
+mod shared;
+pub(super) use shared::{BufEditBehavior, EditModeBehavior};
 
-#[derive(Default)]
-pub struct Select {}
+mod select;
+pub use select::Select;
 
-impl EditModeBehaviour for Select {
-    fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
-        match key.code {
-            KeyCode::Up | KeyCode::Down => {
-                if key.code == KeyCode::Up {
-                    state.table.select_previous()
-                } else {
-                    state.table.select_next()
-                }
-                if state.table.selected_column().is_none() {
-                    state.table.select_first_column();
-                }
-            }
-            KeyCode::Left => state.table.select_previous_column(),
-            KeyCode::Right => state.table.select_next_column(),
-            KeyCode::Esc => state.table.select(None),
-            KeyCode::Char(' ') => return HomeAction::EnterEdit,
-            _ => {}
-        }
-        HomeAction::None
-    }
+mod edit;
+pub use edit::{Description, Duration, Ticket, Time};
 
-    fn style_table<'a>(&self, table: Table<'a>) -> Table<'a> {
-        table.cell_highlight_style(Style::from(Modifier::BOLD))
-    }
-}
-
-#[derive(Default)]
-pub struct Time {
-    buf: String,
-}
-
-impl Time {
-    fn new(state: &HomeState) -> Self {
-        let item = state.expect_selected_item();
-        Self {
-            buf: item.start_time.format("%H%M").to_string(),
-        }
-    }
-}
-
-impl EditModeBehaviour for Time {
-    fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
-        match key.code {
-            KeyCode::Esc => return HomeAction::ExitEdit,
-            KeyCode::Enter => {
-                let parsed = match NaiveTime::parse_from_str(&self.buf, "%H%M") {
-                    Ok(parsed) => parsed,
-                    Err(err) => {
-                        return HomeAction::SetStatusLine(format!("Invalid: {err}"));
-                    }
-                };
-                state.expect_selected_item_mut().start_time = parsed;
-                return HomeAction::ExitEdit;
-            }
-            KeyCode::Char(chr) => {
-                if self.buf.len() < 4 {
-                    self.buf.push(chr);
-                }
-            }
-            KeyCode::Backspace => {
-                if !self.buf.is_empty() {
-                    self.buf.remove(self.buf.len() - 1);
-                }
-            }
-            _ => {}
-        }
-        HomeAction::None
-    }
-
-    fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
-        let mut cells = item.as_cells().clone();
-        cells[0] = Text::from(self.buf.to_owned());
-        Row::new(cells)
-    }
-
-    fn style_table<'a>(&self, table: Table<'a>) -> Table<'a> {
-        table.cell_highlight_style(Style::from(Modifier::UNDERLINED))
-    }
-}
-
-#[enum_dispatch(EditModeBehaviour)]
+#[enum_dispatch(EditModeBehavior)]
 pub enum EditMode {
     Select,
     Time,
+    Ticket,
+    Description,
+    Duration,
 }
 
 impl Default for EditMode {
@@ -118,10 +32,40 @@ impl Default for EditMode {
 }
 
 impl EditMode {
+    pub fn of_time(state: &HomeState) -> Self {
+        Time::new(state).into()
+    }
+
+    pub fn of_ticket(state: &HomeState) -> Self {
+        Ticket::new(state).into()
+    }
+
+    pub fn of_description(state: &HomeState) -> Self {
+        Description::new(state).into()
+    }
+
+    pub fn of_duration() -> Self {
+        Duration::default().into()
+    }
+
     pub fn from_column_num(idx: usize, state: &HomeState) -> Option<Self> {
         Some(match idx {
-            0 => EditMode::from(Time::new(state)),
+            0 => Self::of_time(state),
+            1 => Self::of_ticket(state),
+            2 => Self::of_description(state),
+            3 => Self::of_duration(),
             _ => return None,
         })
+    }
+
+    pub fn get_column_num(&self) -> usize {
+        match self {
+            EditMode::Select(_) => 0,
+
+            EditMode::Time(_) => 0,
+            EditMode::Ticket(_) => 1,
+            EditMode::Description(_) => 2,
+            EditMode::Duration(_) => 3,
+        }
     }
 }

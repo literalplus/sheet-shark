@@ -1,13 +1,12 @@
 use color_eyre::Result;
-use crossterm::event::{KeyEvent, KeyEventKind};
+use crossterm::event::KeyEvent;
 use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
 
 use super::Component;
 use crate::{
     action::Action,
     components::home::{
-        action::HomeAction,
-        editing::{EditMode, EditModeBehaviour},
+        editing::{EditMode, EditModeBehavior},
         state::HomeState,
     },
     config::Config,
@@ -17,9 +16,11 @@ use crate::{
 mod editing;
 mod state;
 mod action {
+    use crate::components::home::editing::EditMode;
+
     pub enum HomeAction {
         None,
-        EnterEdit,
+        EnterEditSpecific(Option<EditMode>),
         ExitEdit,
         SetStatusLine(String),
     }
@@ -33,6 +34,58 @@ pub struct Home {
     state: HomeState,
 }
 
+mod key_handling {
+    use color_eyre::Result;
+    use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
+
+    use super::Home;
+    use crate::{
+        action::Action,
+        components::home::{
+            action::HomeAction,
+            editing::{EditMode, EditModeBehavior},
+            state::HomeState,
+        },
+    };
+
+    pub fn handle(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
+        if key.kind != KeyEventKind::Press {
+            return Ok(None);
+        }
+        let action = handle_global_key_event(home, key)
+            .unwrap_or_else(|| home.edit_mode.handle_key_event(&mut home.state, key));
+        match action {
+            HomeAction::EnterEditSpecific(Some(mode)) => {
+                home.edit_mode = mode;
+                return Ok(Some(Action::SetStatusLine("".into())));
+            }
+            HomeAction::EnterEditSpecific(None) => {
+                return Ok(Some(Action::SetStatusLine("⛔⛔⛔".into())));
+            }
+            HomeAction::ExitEdit => home.edit_mode = EditMode::default(),
+            HomeAction::SetStatusLine(msg) => return Ok(Some(Action::SetStatusLine(msg))),
+            HomeAction::None => {}
+        }
+        Ok(None)
+    }
+
+    fn handle_global_key_event(home: &mut Home, key: KeyEvent) -> Option<HomeAction> {
+        let edit_creator: Box<dyn for<'a> Fn(&'a HomeState) -> EditMode> = match key.code {
+            KeyCode::Char('#') => Box::new(EditMode::of_time),
+            KeyCode::Char('t') => Box::new(EditMode::of_ticket),
+            KeyCode::Char('x') => Box::new(EditMode::of_description),
+            KeyCode::Char('d') => Box::new(|_| EditMode::of_duration()),
+            _ => return None,
+        };
+        if home.state.table.selected().is_none() {
+            home.state.table.select(Some(0));
+        }
+        let mode = edit_creator(&home.state);
+        home.state.table.select_column(Some(mode.get_column_num()));
+        Some(HomeAction::EnterEditSpecific(Some(mode)))
+    }
+}
+
 impl Component for Home {
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         self.config = config;
@@ -40,33 +93,7 @@ impl Component for Home {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        if key.kind != KeyEventKind::Press {
-            return Ok(None);
-        }
-        match self.edit_mode.handle_key_event(&mut self.state, key) {
-            HomeAction::EnterEdit => {
-                match self
-                    .state
-                    .table
-                    .selected_column()
-                    .and_then(|idx| EditMode::from_column_num(idx, &self.state))
-                {
-                    Some(it) => {
-                        self.edit_mode = it;
-                        return Ok(Some(Action::SetStatusLine("⌚⌚⌚".into())));
-                    }
-                    None => {
-                        return Ok(Some(Action::SetStatusLine(
-                            "Can't edit this! ⛔⛔⛔".into(),
-                        )));
-                    }
-                }
-            }
-            HomeAction::ExitEdit => self.edit_mode = EditMode::default(),
-            HomeAction::SetStatusLine(msg) => return Ok(Some(Action::SetStatusLine(msg))),
-            HomeAction::None => {}
-        }
-        Ok(None)
+        key_handling::handle(self, key)
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
@@ -79,7 +106,7 @@ impl Component for Home {
         frame.render_widget(&block, area);
         let area = block.inner(area);
 
-        let header = ["", "Ticket", "Text", "Duration"]
+        let header = ["#", "Ticket", "teXt", "Duration"]
             .into_iter()
             .map(Cell::from)
             .collect::<Row>()
