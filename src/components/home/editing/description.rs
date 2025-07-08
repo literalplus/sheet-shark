@@ -1,6 +1,6 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    style::{Modifier, Style},
+    style::{Modifier, Style, Stylize, palette::tailwind},
     text::Text,
     widgets::{Row, Table},
 };
@@ -42,6 +42,10 @@ impl EditModeBehavior for Description {
     }
 
     fn style_table<'a>(&self, table: Table<'a>) -> Table<'a> {
-        table.cell_highlight_style(Style::from(Modifier::ITALIC))
+        table.cell_highlight_style(
+            Style::from(Modifier::ITALIC)
+                .not_reversed()
+                .bg(tailwind::INDIGO.c300),
+        )
     }
 }

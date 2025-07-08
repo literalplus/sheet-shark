@@ -1,6 +1,6 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    style::{Modifier, Style},
+    style::{Modifier, Style, Stylize, palette::tailwind},
     text::Text,
     widgets::{Row, Table},
 };
@@ -42,6 +42,10 @@ impl EditModeBehavior for Ticket {
     }
 
     fn style_table<'a>(&self, table: Table<'a>) -> Table<'a> {
-        table.cell_highlight_style(Style::from(Modifier::UNDERLINED))
+        table.cell_highlight_style(
+            Style::from(Modifier::UNDERLINED)
+                .not_reversed()
+                .bg(tailwind::INDIGO.c300),
+        )
     }
 }

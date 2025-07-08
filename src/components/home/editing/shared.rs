@@ -1,6 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use enum_dispatch::enum_dispatch;
 use ratatui::widgets::{Row, Table};
+use tracing::info;
 
 use crate::components::home::{
     action::HomeAction,
@@ -55,8 +56,12 @@ impl BufEditBehavior {
     }
 
     pub fn handle_key_event(&mut self, key: KeyEvent) -> HomeAction {
+        info!("{:?}", key.modifiers);
         match key.code {
             KeyCode::Esc => return HomeAction::ExitEdit,
+            KeyCode::Char('^') => {
+                self.buf.clear();
+            }
             KeyCode::Char(chr) => {
                 self.push(chr);
             }

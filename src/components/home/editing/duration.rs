@@ -1,7 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use humantime::parse_duration;
 use ratatui::{
-    style::{Modifier, Style},
+    style::{Modifier, Style, Stylize, palette::tailwind},
     text::Text,
     widgets::{Row, Table},
 };
@@ -17,40 +17,59 @@ pub struct Duration {
     buf: BufEditBehavior,
 }
 
+impl Duration {
+    fn handle_save(&mut self, state: &mut HomeState) -> HomeAction {
+        if self.buf.parse::<u16>().is_ok() {
+            self.buf.push('m');
+        }
+
+        let parsed = match parse_duration(&self.buf) {
+            Ok(parsed) => parsed,
+            Err(err) => {
+                return HomeAction::SetStatusLine(format!("Invalid: {err}"));
+            }
+        };
+        if parsed.as_secs() == 0 || parsed.as_secs() % 60 != 0 {
+            return HomeAction::SetStatusLine(
+                "Duration must be a whole number of minutes (e.g. 15m)".to_string(),
+            );
+        }
+        state.expect_selected_item_mut().duration = parsed;
+
+        if state.is_last_row_selected() {
+            Self::create_next_item(state);
+        } else {
+            Self::adjust_following_items(state);
+        }
+
+        HomeAction::ExitEdit
+    }
+
+    fn create_next_item(state: &mut HomeState) {
+        let new_item = TimeItem {
+            start_time: state.expect_selected_item().next_start_time(),
+            ..TimeItem::default()
+        };
+        state.items.push(new_item);
+        state.table.select_last();
+        state.table.select_first_column();
+    }
+
+    fn adjust_following_items(state: &mut HomeState) {
+        let items_before_mine = state.table.selected().unwrap_or(0);
+        let mut next_start_time = state.expect_selected_item().next_start_time();
+
+        for item_to_adjust in state.items.iter_mut().skip(items_before_mine + 1) {
+            item_to_adjust.start_time = next_start_time;
+            next_start_time = item_to_adjust.next_start_time();
+        }
+    }
+}
+
 impl EditModeBehavior for Duration {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
         match key.code {
-            KeyCode::Enter => {
-                if self.buf.parse::<u16>().is_ok() {
-                    self.buf.push('m');
-                }
-                let parsed = match parse_duration(&self.buf) {
-                    Ok(parsed) => parsed,
-                    Err(err) => {
-                        return HomeAction::SetStatusLine(format!("Invalid: {err}"));
-                    }
-                };
-                if parsed.as_secs() == 0 || parsed.as_secs() % 60 != 0 {
-                    return HomeAction::SetStatusLine(
-                        "Duration must be a whole number of minutes (e.g. 15m)".to_string(),
-                    );
-                }
-                state.expect_selected_item_mut().duration = parsed;
-
-                let my_item = state.expect_selected_item();
-                let initial_last_item = state.items.len() - 1;
-                if state.table.selected() == Some(initial_last_item) {
-                    let new_item = TimeItem {
-                        start_time: my_item.start_time + parsed,
-                        ..TimeItem::default()
-                    };
-                    state.items.push(new_item);
-                    state.table.select_last();
-                    state.table.select_first_column();
-                }
-
-                HomeAction::ExitEdit
-            }
+            KeyCode::Enter => self.handle_save(state),
             _ => self.buf.handle_key_event(key),
         }
     }
@@ -66,6 +85,10 @@ impl EditModeBehavior for Duration {
     }
 
     fn style_table<'a>(&self, table: Table<'a>) -> Table<'a> {
-        table.cell_highlight_style(Style::from(Modifier::ITALIC))
+        table.cell_highlight_style(
+            Style::from(Modifier::ITALIC)
+                .not_reversed()
+                .bg(tailwind::INDIGO.c300),
+        )
     }
 }

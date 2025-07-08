@@ -36,6 +36,10 @@ impl TimeItem {
             Text::from(formatted_duration),
         ]
     }
+
+    pub fn next_start_time(&self) -> NaiveTime {
+        self.start_time + self.duration
+    }
 }
 
 pub struct HomeState {
