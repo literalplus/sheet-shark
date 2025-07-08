@@ -77,9 +77,7 @@ mod key_handling {
             KeyCode::Char('d') => Box::new(|_| EditMode::of_duration()),
             _ => return None,
         };
-        if home.state.table.selected().is_none() {
-            home.state.table.select(Some(0));
-        }
+        home.state.ensure_row_selected();
         let mode = edit_creator(&home.state);
         home.state.table.select_column(Some(mode.get_column_num()));
         Some(HomeAction::EnterEditSpecific(Some(mode)))

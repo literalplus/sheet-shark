@@ -10,11 +10,15 @@ use crate::components::home::{
 mod shared;
 pub(super) use shared::{BufEditBehavior, EditModeBehavior};
 
+mod description;
+mod duration;
 mod select;
-pub use select::Select;
+mod ticket;
+mod time;
 
-mod edit;
-pub use edit::{Description, Duration, Ticket, Time};
+use self::{
+    description::Description, duration::Duration, select::Select, ticket::Ticket, time::Time,
+};
 
 #[enum_dispatch(EditModeBehavior)]
 pub enum EditMode {

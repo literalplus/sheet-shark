@@ -50,11 +50,15 @@ impl BufEditBehavior {
         }
     }
 
+    pub fn push(&mut self, chr: char) {
+        self.buf.push(chr);
+    }
+
     pub fn handle_key_event(&mut self, key: KeyEvent) -> HomeAction {
         match key.code {
             KeyCode::Esc => return HomeAction::ExitEdit,
             KeyCode::Char(chr) => {
-                self.buf.push(chr);
+                self.push(chr);
             }
             KeyCode::Backspace => {
                 if !self.buf.is_empty() {
