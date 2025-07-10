@@ -1,15 +1,18 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    style::{palette::tailwind, Modifier, Style, Stylize},
+    style::{Modifier, Style, Stylize, palette::tailwind},
     widgets::Table,
 };
 
 use super::EditModeBehavior;
-use crate::components::home::{action::HomeAction, editing::{shared::handle_movement, EditMode}, state::HomeState};
+use crate::components::home::{
+    action::HomeAction,
+    editing::{EditMode, shared::handle_movement},
+    state::HomeState,
+};
 
 #[derive(Default)]
 pub struct Select {}
-
 
 impl EditModeBehavior for Select {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
@@ -36,7 +39,7 @@ impl EditModeBehavior for Select {
         table.cell_highlight_style(
             Style::from(Modifier::BOLD)
                 .not_reversed()
-                .bg(tailwind::SLATE.c300),
+                .bg(tailwind::SLATE.c400),
         )
     }
 }

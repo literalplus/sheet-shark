@@ -5,9 +5,11 @@ use ratatui::{
     widgets::{Row, Table},
 };
 
-use super::{EditModeBehavior};
+use super::EditModeBehavior;
 use crate::components::home::{
-    action::HomeAction, editing::shared::BufEditBehavior, state::{HomeState, TimeItem}
+    action::HomeAction,
+    editing::shared::BufEditBehavior,
+    state::{HomeState, TimeItem},
 };
 
 pub struct Description {

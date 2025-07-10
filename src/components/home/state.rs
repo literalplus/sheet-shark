@@ -15,7 +15,7 @@ pub struct TimeItem {
     pub duration: Duration,
 }
 
-const TIME_ITEM_WIDTH: usize = 4;
+pub const TIME_ITEM_WIDTH: usize = 4;
 
 impl TimeItem {
     pub fn as_row<'a>(&'a self) -> Row<'a> {
