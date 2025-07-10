@@ -1,14 +1,13 @@
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyEvent;
 use ratatui::{
     style::{Modifier, Style, Stylize, palette::tailwind},
     text::Text,
     widgets::{Row, Table},
 };
 
-use super::{BufEditBehavior, EditModeBehavior};
+use super::{EditModeBehavior};
 use crate::components::home::{
-    action::HomeAction,
-    state::{HomeState, TimeItem},
+    action::HomeAction, editing::shared::BufEditBehavior, state::{HomeState, TimeItem}
 };
 
 pub struct Description {
@@ -26,13 +25,10 @@ impl Description {
 
 impl EditModeBehavior for Description {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
-        match key.code {
-            KeyCode::Enter => {
-                state.expect_selected_item_mut().description = self.buf.to_owned();
-                HomeAction::ExitEdit
-            }
-            _ => self.buf.handle_key_event(key),
+        if self.buf.should_save(key) {
+            state.expect_selected_item_mut().description = self.buf.to_owned();
         }
+        self.buf.handle_key_event(state, key)
     }
 
     fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {

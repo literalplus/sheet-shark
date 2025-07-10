@@ -8,7 +8,7 @@ use crate::components::home::{
 };
 
 mod shared;
-pub(super) use shared::{BufEditBehavior, EditModeBehavior};
+pub(super) use shared::EditModeBehavior;
 
 mod description;
 mod duration;

@@ -16,6 +16,8 @@ use crate::{
 mod editing;
 mod state;
 mod action {
+    use color_eyre::eyre::ErrReport;
+
     use crate::components::home::editing::EditMode;
 
     pub enum HomeAction {
@@ -23,6 +25,12 @@ mod action {
         EnterEditSpecific(Option<EditMode>),
         ExitEdit,
         SetStatusLine(String),
+    }
+
+    impl From<ErrReport> for HomeAction {
+        fn from(value: ErrReport) -> Self {
+            Self::SetStatusLine(format!("{value}"))
+        }
     }
 }
 
@@ -56,6 +64,7 @@ mod key_handling {
             .unwrap_or_else(|| home.edit_mode.handle_key_event(&mut home.state, key));
         match action {
             HomeAction::EnterEditSpecific(Some(mode)) => {
+                home.state.table.select_column(Some(mode.get_column_num()));
                 home.edit_mode = mode;
                 return Ok(Some(Action::SetStatusLine("".into())));
             }
@@ -79,7 +88,6 @@ mod key_handling {
         };
         home.state.ensure_row_selected();
         let mode = edit_creator(&home.state);
-        home.state.table.select_column(Some(mode.get_column_num()));
         Some(HomeAction::EnterEditSpecific(Some(mode)))
     }
 }
@@ -133,8 +141,7 @@ impl Component for Home {
             ],
         )
         .header(header)
-        .row_highlight_style(Style::from(Modifier::REVERSED))
-        .cell_highlight_style(Style::from(Modifier::BOLD));
+        .row_highlight_style(Style::from(Modifier::REVERSED));
         let table = self.edit_mode.style_table(table);
 
         frame.render_stateful_widget(table, area, &mut self.state.table);

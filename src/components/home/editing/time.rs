@@ -1,4 +1,5 @@
 use chrono::NaiveTime;
+use color_eyre::eyre::{Result, eyre};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     style::{Modifier, Style, Stylize, palette::tailwind},
@@ -6,9 +7,10 @@ use ratatui::{
     widgets::{Row, Table},
 };
 
-use super::{BufEditBehavior, EditModeBehavior};
+use super::EditModeBehavior;
 use crate::components::home::{
     action::HomeAction,
+    editing::shared::BufEditBehavior,
     state::{HomeState, TimeItem},
 };
 
@@ -23,23 +25,26 @@ impl Time {
             buf: BufEditBehavior::new(item.start_time.format("%H%M")),
         }
     }
+
+    fn handle_save(&self, state: &mut HomeState) -> Result<()> {
+        let parsed = NaiveTime::parse_from_str((&self.buf).into(), "%H%M");
+        let parsed = parsed.map_err(|err| eyre!("invalid: {err}"))?;
+        state.expect_selected_item_mut().start_time = parsed;
+        Ok(())
+    }
 }
 
 impl EditModeBehavior for Time {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
+        if self.buf.should_save(key)
+            && let Err(err) = self.handle_save(state)
+        {
+            return err.into();
+        }
         match key.code {
-            KeyCode::Enter => {
-                let parsed = match NaiveTime::parse_from_str((&self.buf).into(), "%H%M") {
-                    Ok(parsed) => parsed,
-                    Err(err) => {
-                        return HomeAction::SetStatusLine(format!("Invalid: {err}"));
-                    }
-                };
-                state.expect_selected_item_mut().start_time = parsed;
-                HomeAction::ExitEdit
-            }
+            KeyCode::Enter => HomeAction::ExitEdit,
             KeyCode::Char(_) if self.buf.len() >= 4 => HomeAction::None,
-            _ => self.buf.handle_key_event(key),
+            _ => self.buf.handle_key_event(state, key),
         }
     }
 
