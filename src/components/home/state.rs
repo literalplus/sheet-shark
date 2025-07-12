@@ -53,14 +53,20 @@ impl Default for HomeState {
             table: TableState::default(),
             items: vec![
                 TimeItem {
-                    start_time: NaiveTime::from_hms_opt(9, 15, 0).unwrap(),
+                    start_time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
                     ticket: "(W)SCRUM-17".into(),
                     description: "daily".into(),
-                    duration: parse_duration("15m").unwrap(),
+                    duration: parse_duration("1h").unwrap(),
                 },
                 TimeItem {
-                    start_time: NaiveTime::from_hms_opt(9, 30, 0).unwrap(),
-                    ticket: "(W)XAMPL-568".into(),
+                    start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+                    ticket: "(W)XAMPL-569".into(),
+                    description: "implementation".into(),
+                    duration: parse_duration("1h").unwrap(),
+                },
+                TimeItem {
+                    start_time: NaiveTime::from_hms_opt(11, 0, 0).unwrap(),
+                    ticket: "(W)REFI-12".into(),
                     description: "tech analysis".into(),
                     duration: Duration::default(),
                 },

@@ -15,9 +15,7 @@ mod duration;
 mod ticket;
 mod time;
 
-use self::{
-    description::Description, duration::Duration, ticket::Ticket, time::Time,
-};
+use self::{description::Description, duration::Duration, ticket::Ticket, time::Time};
 
 #[derive(PartialEq, Eq)]
 #[enum_dispatch(EditModeBehavior)]

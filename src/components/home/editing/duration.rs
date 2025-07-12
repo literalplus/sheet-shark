@@ -1,3 +1,6 @@
+use std::cmp::Ordering;
+
+use chrono::TimeDelta;
 use color_eyre::eyre::{Result, bail, eyre};
 use crossterm::event::KeyEvent;
 use humantime::parse_duration;
@@ -35,8 +38,10 @@ impl Duration {
         if state.is_last_row_selected() {
             Self::create_next_item(state);
         } else {
+            // The idea behind editing duration is that it's taken from (or added to) the next item(s)
             Self::adjust_following_items(state);
         }
+
         Ok(())
     }
 
@@ -51,12 +56,46 @@ impl Duration {
     }
 
     fn adjust_following_items(state: &mut HomeState) {
-        let items_before_mine = state.table.selected().unwrap_or(0);
-        let mut next_start_time = state.expect_selected_item().next_start_time();
+        let my_index = state.table.selected().expect("selected");
+        let last_index = state.items.len() - 1;
+        let new_end_time = state.expect_selected_item().next_start_time();
+        let mut num_items_to_remove = 0;
 
-        for item_to_adjust in state.items.iter_mut().skip(items_before_mine + 1) {
-            item_to_adjust.start_time = next_start_time;
-            next_start_time = item_to_adjust.next_start_time();
+        for (idx, item_to_adjust) in state.items.iter_mut().enumerate().skip(my_index + 1) {
+            if idx == last_index && item_to_adjust.duration.is_zero() {
+                item_to_adjust.start_time = new_end_time;
+                break; // duration hasn't been filled yet
+            }
+
+            let delta = new_end_time - item_to_adjust.start_time;
+            let delta_duration_abs =
+                std::time::Duration::from_secs(delta.num_seconds().unsigned_abs());
+
+            if delta.is_zero() {
+                break;
+            } else if delta < TimeDelta::zero() {
+                item_to_adjust.start_time += delta; // Actually subtracts; delta < 0
+                item_to_adjust.duration += delta_duration_abs;
+                break;
+            }
+
+            // Otherwise, we have to steal from the next item(s)
+            let big_enough_to_cover = item_to_adjust.duration.cmp(&delta_duration_abs);
+            match big_enough_to_cover {
+                Ordering::Equal | Ordering::Less => num_items_to_remove += 1,
+                Ordering::Greater => {
+                    item_to_adjust.duration -= delta_duration_abs;
+                    item_to_adjust.start_time = new_end_time;
+                    break;
+                }
+            }
+        }
+
+        if num_items_to_remove > 0 {
+            let drain_start = my_index + 1;
+            state
+                .items
+                .drain(drain_start..(drain_start + num_items_to_remove));
         }
     }
 }
