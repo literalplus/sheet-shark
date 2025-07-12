@@ -15,6 +15,7 @@ use crate::{
 
 mod editing;
 mod key_handling;
+mod movement;
 mod state;
 mod action {
     use color_eyre::eyre::ErrReport;
@@ -40,7 +41,7 @@ mod action {
 pub struct Home {
     config: Config,
 
-    edit_mode: EditMode,
+    edit_mode: Option<EditMode>,
     state: HomeState,
 
     need_status_line_reset: bool,
@@ -77,8 +78,10 @@ impl Component for Home {
                 0 => tailwind::SLATE.c950,
                 _ => tailwind::SLATE.c900,
             };
-            let row = if Some(i) == self.state.table.selected() {
-                self.edit_mode.style_selected_item(item)
+            let row = if Some(i) == self.state.table.selected()
+                && let Some(edit_mode) = &self.edit_mode
+            {
+                edit_mode.style_selected_item(item)
             } else {
                 item.as_row()
             };
@@ -95,8 +98,17 @@ impl Component for Home {
             ],
         )
         .header(header)
-        .row_highlight_style(Style::from(Modifier::REVERSED));
-        let table = self.edit_mode.style_table(table);
+        .row_highlight_style(Style::from(Modifier::REVERSED))
+        .cell_highlight_style(
+            Style::from(Modifier::BOLD)
+                .not_reversed()
+                .bg(tailwind::SLATE.c400),
+        );
+
+        let table = match &self.edit_mode {
+            Some(edit_mode) => edit_mode.style_table(table),
+            None => table,
+        };
 
         frame.render_stateful_widget(table, area, &mut self.state.table);
         Ok(())

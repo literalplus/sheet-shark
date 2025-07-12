@@ -12,28 +12,20 @@ pub(super) use shared::EditModeBehavior;
 
 mod description;
 mod duration;
-mod select;
 mod ticket;
 mod time;
 
 use self::{
-    description::Description, duration::Duration, select::Select, ticket::Ticket, time::Time,
+    description::Description, duration::Duration, ticket::Ticket, time::Time,
 };
 
 #[derive(PartialEq, Eq)]
 #[enum_dispatch(EditModeBehavior)]
 pub enum EditMode {
-    Select,
     Time,
     Ticket,
     Description,
     Duration,
-}
-
-impl Default for EditMode {
-    fn default() -> Self {
-        EditMode::from(Select::default())
-    }
 }
 
 impl EditMode {
@@ -65,8 +57,6 @@ impl EditMode {
 
     pub fn get_column_num(&self) -> usize {
         match self {
-            EditMode::Select(_) => 0,
-
             EditMode::Time(_) => 0,
             EditMode::Ticket(_) => 1,
             EditMode::Description(_) => 2,
