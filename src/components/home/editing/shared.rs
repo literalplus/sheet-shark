@@ -5,7 +5,10 @@ use enum_dispatch::enum_dispatch;
 use ratatui::widgets::{Row, Table};
 
 use crate::components::home::{
-    action::HomeAction, editing::EditMode, movement::{handle_movement, is_movement}, state::{HomeState, TimeItem}
+    action::HomeAction,
+    editing::EditMode,
+    movement::{handle_movement, is_movement},
+    state::{HomeState, TimeItem},
 };
 
 #[enum_dispatch]
@@ -79,7 +82,8 @@ impl BufEditBehavior {
             }
             KeyCode::Backspace => {
                 if !self.buf.is_empty() {
-                    self.buf.remove(self.buf.len() - 1);
+                    let (last_char_idx, _) = self.buf.char_indices().last().expect(">0 chars");
+                    self.buf.remove(last_char_idx);
                 }
             }
             _ => {}
@@ -87,4 +91,3 @@ impl BufEditBehavior {
         HomeAction::None
     }
 }
-

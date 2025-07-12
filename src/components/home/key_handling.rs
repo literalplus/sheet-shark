@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 
@@ -8,7 +10,7 @@ use crate::{
         action::HomeAction,
         editing::{EditMode, EditModeBehavior},
         movement::handle_movement,
-        state::HomeState,
+        state::{HomeState, TimeItem},
     },
 };
 
@@ -53,6 +55,11 @@ fn handle_outside_edit(state: &mut HomeState, key: KeyEvent) -> HomeAction {
                 .and_then(|idx| EditMode::from_column_num(idx, state));
             return HomeAction::EnterEditSpecific(mode_opt);
         }
+        KeyCode::Char('s') => {
+            if let Some(idx) = state.table.selected() {
+                return HomeAction::SplitItemDown(idx);
+            }
+        }
         _ => {}
     }
     HomeAction::None
@@ -60,7 +67,7 @@ fn handle_outside_edit(state: &mut HomeState, key: KeyEvent) -> HomeAction {
 
 fn handle_jump_key(state: &mut HomeState, key: KeyEvent) -> Option<EditMode> {
     let edit_creator: Box<dyn for<'a> Fn(&'a HomeState) -> EditMode> = match key.code {
-        KeyCode::Char('#') => Box::new(EditMode::of_time),
+        KeyCode::Char('#') => Box::new(|_| EditMode::of_time()),
         KeyCode::Char('t') => Box::new(EditMode::of_ticket),
         KeyCode::Char('x') => Box::new(EditMode::of_description),
         KeyCode::Char('d') => Box::new(|_| EditMode::of_duration()),
@@ -82,7 +89,33 @@ fn perform_action(home: &mut Home, action: HomeAction) -> Result<Option<Action>>
         }
         HomeAction::ExitEdit => home.edit_mode = None,
         HomeAction::SetStatusLine(msg) => return Ok(Some(Action::SetStatusLine(msg))),
+        HomeAction::SplitItemDown(idx) => {
+            let original_item = home
+                .state
+                .items
+                .get_mut(idx)
+                .expect("item to split to exist");
+            let duration_mins = original_item.duration.as_secs().div_ceil(60);
+            if duration_mins <= 1 {
+                return Ok(Some(Action::SetStatusLine("cannot split further!".into())));
+            }
+            let (first_duration, second_duration) = split_in_half(duration_mins);
+            original_item.duration = Duration::from_secs(first_duration * 60);
+            let new_item = TimeItem {
+                duration: Duration::from_secs(second_duration * 60),
+                start_time: original_item.start_time,
+                ..Default::default()
+            };
+            original_item.start_time += new_item.duration;
+            home.state.items.insert(idx, new_item);
+        }
         HomeAction::None => {}
     }
     Ok(None)
+}
+
+fn split_in_half(n: u64) -> (u64, u64) {
+    let half_down = n / 2;
+    let half_up = n - half_down;
+    (half_up, half_down)
 }

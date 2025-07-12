@@ -28,6 +28,7 @@ mod action {
         EnterEditSpecific(Option<EditMode>),
         ExitEdit,
         SetStatusLine(String),
+        SplitItemDown(usize),
     }
 
     impl From<ErrReport> for HomeAction {
@@ -75,7 +76,7 @@ impl Component for Home {
             .bg(tailwind::INDIGO.c900);
         let rows = self.state.items.iter().enumerate().map(|(i, item)| {
             let color = match i % 2 {
-                0 => tailwind::SLATE.c950,
+                0 => tailwind::SLATE.c800,
                 _ => tailwind::SLATE.c900,
             };
             let row = if Some(i) == self.state.table.selected()

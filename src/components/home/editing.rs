@@ -29,8 +29,8 @@ pub enum EditMode {
 }
 
 impl EditMode {
-    pub fn of_time(state: &HomeState) -> Self {
-        Time::new(state).into()
+    pub fn of_time() -> Self {
+        Time::default().into()
     }
 
     pub fn of_ticket(state: &HomeState) -> Self {
@@ -47,7 +47,7 @@ impl EditMode {
 
     pub fn from_column_num(idx: usize, state: &HomeState) -> Option<Self> {
         Some(match idx {
-            0 => Self::of_time(state),
+            0 => Self::of_time(),
             1 => Self::of_ticket(state),
             2 => Self::of_description(state),
             3 | usize::MAX => Self::of_duration(), // MAX is set by select_last_column()
