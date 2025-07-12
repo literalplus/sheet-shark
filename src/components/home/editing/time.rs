@@ -39,7 +39,10 @@ impl Time {
 
         self.ensure_not_before_previous(state, parsed)?;
         self.ensure_not_after_next(state, parsed)?;
+
+        // The idea for editing time is that it's taken away from the previous item and added to self
         self.adjust_previous_item(state, parsed);
+        self.adjust_self(state, parsed);
 
         state.expect_selected_item_mut().start_time = parsed;
         Ok(())
@@ -90,7 +93,7 @@ impl Time {
             return;
         }
 
-        let my_index = state.table.selected().unwrap_or(1);
+        let my_index = state.table.selected().expect("self selected for prev");
         let my_previous_time = state.expect_selected_item().start_time;
 
         let previous_item = state
@@ -104,6 +107,22 @@ impl Time {
             previous_item.duration -= duration_unsigned;
         } else {
             previous_item.duration += duration_unsigned;
+        }
+    }
+
+    fn adjust_self(&self, state: &mut HomeState, my_next_time: NaiveTime) {
+        let my_item = state.expect_selected_item_mut();
+        let my_previous_time = my_item.start_time;
+        if my_item.duration.is_zero() {
+            return; // Last item doesn't have an end yet, don't hallucinate one
+        }
+
+        let time_delta = my_next_time - my_previous_time; // signed as opposed to Duration
+        let duration_unsigned = Duration::from_secs(time_delta.num_seconds().unsigned_abs());
+        if time_delta < TimeDelta::zero() {
+            my_item.duration += duration_unsigned;
+        } else {
+            my_item.duration -= duration_unsigned;
         }
     }
 }
