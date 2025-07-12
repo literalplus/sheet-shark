@@ -1,5 +1,5 @@
 use color_eyre::Result;
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{KeyEvent, KeyEventKind};
 
 use super::Home;
 use crate::{
@@ -7,7 +7,6 @@ use crate::{
     components::home::{
         action::HomeAction,
         editing::{EditMode, EditModeBehavior},
-        state::HomeState,
     },
 };
 
@@ -16,8 +15,9 @@ pub fn handle(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
         return Ok(None);
     }
 
-    let action = handle_global_key_event(home, key)
-        .unwrap_or_else(|| home.edit_mode.handle_key_event(&mut home.state, key));
+    let action = Some(home.edit_mode.handle_key_event(&mut home.state, key))
+        .filter(|it| *it != HomeAction::None)
+        .unwrap_or_else(handle_global_key_event);
 
     match perform_action(home, action) {
         result @ Ok(Some(Action::SetStatusLine(_))) => {
@@ -32,17 +32,8 @@ pub fn handle(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
     }
 }
 
-fn handle_global_key_event(home: &mut Home, key: KeyEvent) -> Option<HomeAction> {
-    let edit_creator: Box<dyn for<'a> Fn(&'a HomeState) -> EditMode> = match key.code {
-        KeyCode::Char('#') => Box::new(EditMode::of_time),
-        KeyCode::Char('t') => Box::new(EditMode::of_ticket),
-        KeyCode::Char('x') => Box::new(EditMode::of_description),
-        KeyCode::Char('d') => Box::new(|_| EditMode::of_duration()),
-        _ => return None,
-    };
-    home.state.ensure_row_selected();
-    let mode = edit_creator(&home.state);
-    Some(HomeAction::EnterEditSpecific(Some(mode)))
+fn handle_global_key_event() -> HomeAction {
+    HomeAction::None
 }
 
 fn perform_action(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {

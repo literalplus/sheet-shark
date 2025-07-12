@@ -21,6 +21,7 @@ mod action {
 
     use crate::components::home::editing::EditMode;
 
+    #[derive(PartialEq, Eq)]
     pub enum HomeAction {
         None,
         EnterEditSpecific(Option<EditMode>),

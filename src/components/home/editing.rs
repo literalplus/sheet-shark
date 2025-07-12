@@ -20,6 +20,7 @@ use self::{
     description::Description, duration::Duration, select::Select, ticket::Ticket, time::Time,
 };
 
+#[derive(PartialEq, Eq)]
 #[enum_dispatch(EditModeBehavior)]
 pub enum EditMode {
     Select,
@@ -57,7 +58,7 @@ impl EditMode {
             0 => Self::of_time(state),
             1 => Self::of_ticket(state),
             2 => Self::of_description(state),
-            3 => Self::of_duration(),
+            3 | usize::MAX => Self::of_duration(), // MAX is set by select_last_column()
             _ => return None,
         })
     }
