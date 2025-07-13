@@ -1,10 +1,12 @@
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
+use lazy_static::lazy_static;
 use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
+use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
 use crate::{
-    action::Action,
+    action::{Action, RelevantKey},
     components::home::{
         editing::{EditMode, EditModeBehavior},
         state::HomeState,
@@ -41,6 +43,7 @@ mod action {
 #[derive(Default)]
 pub struct Home {
     config: Config,
+    action_tx: Option<UnboundedSender<Action>>,
 
     edit_mode: Option<EditMode>,
     state: HomeState,
@@ -51,6 +54,16 @@ pub struct Home {
 impl Component for Home {
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         self.config = config;
+        Ok(())
+    }
+
+    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
+        self.action_tx = Some(tx);
+        self.action_tx
+            .as_mut()
+            .unwrap()
+            .send(Action::SetRelevantKeys(SELECTING_KEYS.to_vec()))
+            .expect("sent initial keys");
         Ok(())
     }
 
@@ -68,7 +81,7 @@ impl Component for Home {
         frame.render_widget(&block, area);
         let area = block.inner(area);
 
-        let header = ["#", "Ticket", "teXt", "Duration"]
+        let header = ["#", "Ticket", "dEscription", "Duration"]
             .into_iter()
             .map(Cell::from)
             .collect::<Row>()
@@ -114,4 +127,17 @@ impl Component for Home {
         frame.render_stateful_widget(table, area, &mut self.state.table);
         Ok(())
     }
+}
+
+lazy_static! {
+    static ref SELECTING_KEYS: Vec<RelevantKey> = vec![
+        RelevantKey::new("q", "Quit"),
+        RelevantKey::new("Space", "Edit"),
+        RelevantKey::new("s", "Split"),
+        RelevantKey::new("⇆ ⇵", "Move"),
+    ];
+    static ref EDITING_KEYS: Vec<RelevantKey> = vec![
+        RelevantKey::new("q", "Quit"),
+        RelevantKey::new("^", "Clear"),
+    ];
 }

@@ -14,22 +14,10 @@ use crate::{
     layout::LayoutSlot,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct StatusBar {
     status_line: String,
     keys: Vec<RelevantKey>,
-}
-
-impl Default for StatusBar {
-    fn default() -> Self {
-        Self {
-            status_line: "Hello, world!".to_owned(),
-            keys: vec![
-                RelevantKey::new("q", "Quit"),
-                RelevantKey::new("Space", "Edit cell"),
-            ],
-        }
-    }
 }
 
 impl Component for StatusBar {

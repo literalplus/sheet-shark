@@ -7,6 +7,7 @@ use super::Home;
 use crate::{
     action::Action,
     components::home::{
+        EDITING_KEYS, SELECTING_KEYS,
         action::HomeAction,
         editing::{EditMode, EditModeBehavior},
         movement::handle_movement,
@@ -69,7 +70,7 @@ fn handle_jump_key(state: &mut HomeState, key: KeyEvent) -> Option<EditMode> {
     let edit_creator: Box<dyn for<'a> Fn(&'a HomeState) -> EditMode> = match key.code {
         KeyCode::Char('#') => Box::new(|_| EditMode::of_time()),
         KeyCode::Char('t') => Box::new(EditMode::of_ticket),
-        KeyCode::Char('x') => Box::new(EditMode::of_description),
+        KeyCode::Char('e') => Box::new(EditMode::of_description),
         KeyCode::Char('d') => Box::new(|_| EditMode::of_duration()),
         _ => return None,
     };
@@ -82,12 +83,15 @@ fn perform_action(home: &mut Home, action: HomeAction) -> Result<Option<Action>>
         HomeAction::EnterEditSpecific(Some(mode)) => {
             home.state.table.select_column(Some(mode.get_column_num()));
             home.edit_mode = Some(mode);
-            return Ok(Some(Action::SetStatusLine("".into())));
+            return Ok(Some(Action::SetRelevantKeys(EDITING_KEYS.to_vec())));
         }
         HomeAction::EnterEditSpecific(None) => {
             return Ok(Some(Action::SetStatusLine("⛔⛔⛔".into())));
         }
-        HomeAction::ExitEdit => home.edit_mode = None,
+        HomeAction::ExitEdit => {
+            home.edit_mode = None;
+            return Ok(Some(Action::SetRelevantKeys(SELECTING_KEYS.to_vec())));
+        }
         HomeAction::SetStatusLine(msg) => return Ok(Some(Action::SetStatusLine(msg))),
         HomeAction::SplitItemDown(idx) => {
             let original_item = home
