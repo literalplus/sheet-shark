@@ -2,13 +2,14 @@ use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, info};
 
 use crate::{
     action::Action,
     components::{Component, fps::FpsCounter, home::Home, statusbar::StatusBar},
     config::Config,
+    persist,
     tui::{Event, Tui},
 };
 
@@ -23,6 +24,8 @@ pub struct App {
     last_tick_key_events: Vec<KeyEvent>,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
+    persist_tx: UnboundedSender<persist::Command>,
+    persisted_rx: UnboundedReceiver<persist::Event>,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -32,7 +35,12 @@ pub enum Mode {
 }
 
 impl App {
-    pub fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
+    pub fn new(
+        tick_rate: f64,
+        frame_rate: f64,
+        persist_tx: UnboundedSender<persist::Command>,
+        persisted_rx: UnboundedReceiver<persist::Event>,
+    ) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         Ok(Self {
             tick_rate,
@@ -49,10 +57,12 @@ impl App {
             last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,
+            persist_tx,
+            persisted_rx,
         })
     }
 
-    pub async fn run(&mut self) -> Result<()> {
+    pub async fn run(mut self) -> Result<()> {
         let mut tui = Tui::new()?
             // .mouse(true) // uncomment this line to enable mouse support
             .tick_rate(self.tick_rate)
@@ -66,12 +76,16 @@ impl App {
             component.register_config_handler(self.config.clone())?;
         }
         for component in self.components.iter_mut() {
+            component.register_persist_handler(self.persist_tx.clone())?;
+        }
+        for component in self.components.iter_mut() {
             component.init(tui.size()?)?;
         }
 
         let action_tx = self.action_tx.clone();
         loop {
             self.handle_events(&mut tui).await?;
+            self.handle_persisted().await?;
             self.handle_actions(&mut tui)?;
             if self.should_suspend {
                 tui.suspend()?;
@@ -81,6 +95,7 @@ impl App {
                 tui.enter()?;
             } else if self.should_quit {
                 tui.stop()?;
+                self.persisted_rx.close();
                 break;
             }
         }
@@ -110,14 +125,13 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
-        let action_tx = self.action_tx.clone();
         let Some(keymap) = self.config.keybindings.get(&self.mode) else {
             return Ok(());
         };
         match keymap.get(&vec![key]) {
             Some(action) => {
                 info!("Got action: {action:?}");
-                action_tx.send(action.clone())?;
+                self.action_tx.send(action.clone())?;
             }
             _ => {
                 // If the key was not handled as a single key action,
@@ -127,7 +141,19 @@ impl App {
                 // Check for multi-key combinations
                 if let Some(action) = keymap.get(&self.last_tick_key_events) {
                     info!("Got action: {action:?}");
-                    action_tx.send(action.clone())?;
+                    self.action_tx.send(action.clone())?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn handle_persisted(&mut self) -> Result<()> {
+        while let Ok(event) = self.persisted_rx.try_recv() {
+            debug!("Persisted: {event:?}");
+            for component in self.components.iter_mut() {
+                if let Some(action) = component.handle_persisted(event.clone())? {
+                    self.action_tx.send(action)?;
                 }
             }
         }

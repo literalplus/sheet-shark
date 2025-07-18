@@ -13,6 +13,7 @@ use crate::{
         movement::handle_movement,
         state::{HomeState, TimeItem},
     },
+    persist,
 };
 
 pub fn handle(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
@@ -22,7 +23,7 @@ pub fn handle(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
 
     let action = match &mut home.edit_mode {
         Some(mode) => mode.handle_key_event(&mut home.state, key),
-        None => handle_outside_edit(&mut home.state, key),
+        None => handle_outside_edit(home, key),
     };
 
     match perform_action(home, action) {
@@ -38,7 +39,8 @@ pub fn handle(home: &mut Home, key: KeyEvent) -> Result<Option<Action>> {
     }
 }
 
-fn handle_outside_edit(state: &mut HomeState, key: KeyEvent) -> HomeAction {
+fn handle_outside_edit(home: &mut Home, key: KeyEvent) -> HomeAction {
+    let state = &mut home.state;
     if let Some(next_mode) = handle_jump_key(state, key) {
         return HomeAction::EnterEditSpecific(Some(next_mode));
     }
@@ -60,6 +62,14 @@ fn handle_outside_edit(state: &mut HomeState, key: KeyEvent) -> HomeAction {
             if let Some(idx) = state.table.selected() {
                 return HomeAction::SplitItemDown(idx);
             }
+        }
+        KeyCode::Char('+') => {
+            home.persist_tx
+                .as_ref()
+                .unwrap()
+                .send(persist::Command::Demo)
+                .unwrap();
+            return HomeAction::SetStatusLine("Saving a demo...".into());
         }
         _ => {}
     }

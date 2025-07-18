@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS timesheet;
+DROP TABLE IF EXISTS time_entry;

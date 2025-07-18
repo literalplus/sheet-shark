@@ -13,6 +13,7 @@ use crate::{
     },
     config::Config,
     layout::LayoutSlot,
+    persist,
 };
 
 mod editing;
@@ -44,6 +45,7 @@ mod action {
 pub struct Home {
     config: Config,
     action_tx: Option<UnboundedSender<Action>>,
+    persist_tx: Option<UnboundedSender<persist::Command>>,
 
     edit_mode: Option<EditMode>,
     state: HomeState,
@@ -54,6 +56,11 @@ pub struct Home {
 impl Component for Home {
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         self.config = config;
+        Ok(())
+    }
+
+    fn register_persist_handler(&mut self, tx: UnboundedSender<persist::Command>) -> Result<()> {
+        self.persist_tx = Some(tx);
         Ok(())
     }
 

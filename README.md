@@ -8,3 +8,7 @@ ___/|
  ≈≈_ __     Funny CLI fish to help with timesheets 
     \  
 ```
+
+## Development
+
+For the `diesel` CLI, you can use `export DATABASE_URL=~/.local/share/sheet-shark/sharkdb.sqlite`.

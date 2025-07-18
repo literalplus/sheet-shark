@@ -1,0 +1,11 @@
+{
+    "sqltools.useNodeRuntime": true,
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "shheet-shark",
+            "database": "/home/lit/.local/share/sheet-shark/sharkdb.sqlite"
+        }
+    ]
+}
