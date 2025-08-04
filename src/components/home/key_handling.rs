@@ -64,12 +64,11 @@ fn handle_outside_edit(home: &mut Home, key: KeyEvent) -> HomeAction {
             }
         }
         KeyCode::Char('+') => {
-            home.persist_tx
-                .as_ref()
-                .unwrap()
-                .send(persist::Command::Demo)
-                .unwrap();
-            return HomeAction::SetStatusLine("Saving a demo...".into());
+            if let Some(item) = home.state.maybe_selected_item() {
+                let item = item.to_persist("1989-12-13");
+                home.send_persist(persist::Command::StoreEntry(item));
+                return HomeAction::SetStatusLine("Saving!".into());
+            }
         }
         _ => {}
     }
@@ -115,11 +114,10 @@ fn perform_action(home: &mut Home, action: HomeAction) -> Result<Option<Action>>
             }
             let (first_duration, second_duration) = split_in_half(duration_mins);
             original_item.duration = Duration::from_secs(first_duration * 60);
-            let new_item = TimeItem {
-                duration: Duration::from_secs(second_duration * 60),
-                start_time: original_item.start_time,
-                ..Default::default()
-            };
+            let new_item = TimeItem::new(
+                Duration::from_secs(second_duration * 60),
+                original_item.start_time,
+            );
             original_item.start_time += new_item.duration;
             home.state.items.insert(idx, new_item);
         }

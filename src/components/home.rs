@@ -53,6 +53,16 @@ pub struct Home {
     need_status_line_reset: bool,
 }
 
+impl Home {
+    fn send_persist(&mut self, command: persist::Command) {
+        self.persist_tx
+            .as_ref()
+            .expect("persist_tx initialised")
+            .send(command)
+            .expect("able to send persist msg")
+    }
+}
+
 impl Component for Home {
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         self.config = config;
@@ -76,6 +86,14 @@ impl Component for Home {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         key_handling::handle(self, key)
+    }
+
+    fn handle_persisted(&mut self, event: persist::Event) -> Result<Option<Action>> {
+        match event {
+            persist::Event::EntryStored(id) => {
+                Ok(Some(Action::SetStatusLine(format!("Stored: {id}"))))
+            }
+        }
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {

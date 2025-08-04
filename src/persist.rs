@@ -1,10 +1,11 @@
 use std::env;
+use std::str::FromStr;
 
 use color_eyre::{
     Result,
     eyre::{Context, eyre},
 };
-use diesel::{Connection, ExpressionMethods, RunQueryDsl, SqliteConnection};
+use diesel::{Connection, RunQueryDsl, SqliteConnection};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use tokio::{
     runtime::Builder,
@@ -12,13 +13,16 @@ use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
     task::LocalSet,
 };
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 pub mod model;
 mod schema;
 pub use model::*;
 
-use crate::persist::schema::timesheet;
+use crate::persist::schema::{
+    time_entry::{self},
+    timesheet,
+};
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -83,7 +87,7 @@ impl PersistHandler {
                     return Ok(());
                 },
                 work_opt = self.cmd_rx.recv() => {
-                    let work = work_opt.expect("nobody else to be able to close the cmd_rx");
+                    let work = work_opt.expect("nobody else to close the cmd_rx");
                     info!("Persistence command: {work:?}");
                     self.try_handle(work).await;
                 }
@@ -92,24 +96,47 @@ impl PersistHandler {
     }
 
     async fn try_handle(&mut self, cmd: model::Command) {
-        let event = match cmd {
-            model::Command::Demo => {
-                let sheet = Timesheet {
-                    day: "fake",
-                    status: "OPEN",
-                };
-                diesel::insert_into(timesheet::table)
-                    .values(&sheet)
-                    .on_conflict(timesheet::day)
-                    .do_update()
-                    .set(timesheet::status.eq("OPEN"))
-                    .execute(&mut self.conn)
-                    .expect("oida");
-                model::Event::Demo
+        match self.handle(cmd).await {
+            Ok(event) => {
+                if let Err(err) = self.evt_tx.send(event) {
+                    debug!("Unable to send persistence event: {err:?}");
+                }
             }
-        };
-        if let Err(err) = self.evt_tx.send(event) {
-            debug!("Unable to send persistence event: {err:?}");
+            Err(err) => {
+                error!("Error handling persistence command: {err}")
+            }
         }
+    }
+
+    async fn handle(&mut self, cmd: model::Command) -> Result<model::Event> {
+        match cmd {
+            model::Command::StoreEntry(entry) => {
+                self.ensure_timesheet_exists(&entry).await?;
+
+                diesel::insert_into(time_entry::table)
+                    .values(&entry)
+                    .on_conflict(time_entry::id)
+                    .do_update()
+                    .set(&entry)
+                    .execute(&mut self.conn)
+                    .wrap_err("saving time entry")?;
+                Ok(model::Event::EntryStored(TimeEntryId::from_str(&entry.id)?))
+            }
+        }
+    }
+
+    async fn ensure_timesheet_exists(&mut self, entry: &TimeEntry) -> Result<()> {
+        let day = &entry.timesheet_day;
+        let sheet = Timesheet {
+            day,
+            status: "OPEN",
+        };
+        diesel::insert_into(timesheet::table)
+            .values(&sheet)
+            .on_conflict(timesheet::day)
+            .do_nothing()
+            .execute(&mut self.conn)
+            .wrap_err_with(|| format!("trying to ensure timesheet {day} exists"))?;
+        Ok(())
     }
 }

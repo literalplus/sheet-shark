@@ -46,10 +46,10 @@ impl Duration {
     }
 
     fn create_next_item(state: &mut HomeState) {
-        let new_item = TimeItem {
-            start_time: state.expect_selected_item().next_start_time(),
-            ..TimeItem::default()
-        };
+        let new_item = TimeItem::new(
+            Default::default(),
+            state.expect_selected_item().next_start_time(),
+        );
         state.items.push(new_item);
         state.table.select_last();
         state.table.select_first_column();
