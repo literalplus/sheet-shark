@@ -35,6 +35,7 @@ impl TimeItem {
             timesheet_day: day.to_string(),
             duration_mins,
             description: self.description.to_string(),
+            start_time: self.start_time.format("%H:%M").to_string(),
         }
     }
 }

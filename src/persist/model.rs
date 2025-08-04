@@ -19,17 +19,20 @@ pub struct Timesheet<'a> {
     pub status: &'a str,
 }
 
-#[derive(Insertable, AsChangeset, Debug, Clone, Default)]
+#[derive(Insertable, AsChangeset, Debug, Clone)]
 #[diesel(table_name = time_entry)]
 pub struct TimeEntry {
     pub id: String,
     pub timesheet_day: String,
     pub duration_mins: i32,
     pub description: String,
+    pub start_time: String,
 }
 
-impl StaticType for TimeEntry {
+#[derive(Default, Clone)]
+pub struct TimeEntryMarker;
+pub type TimeEntryId = TypeSafeId<TimeEntryMarker>;
+
+impl StaticType for TimeEntryMarker {
     const TYPE: &'static str = "tent";
 }
-
-pub type TimeEntryId = TypeSafeId<TimeEntry>;

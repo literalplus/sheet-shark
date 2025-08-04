@@ -1,4 +1,3 @@
-use std::env;
 use std::str::FromStr;
 
 use color_eyre::{
@@ -19,9 +18,12 @@ pub mod model;
 mod schema;
 pub use model::*;
 
-use crate::persist::schema::{
-    time_entry::{self},
-    timesheet,
+use crate::{
+    config::get_data_dir,
+    persist::schema::{
+        time_entry::{self},
+        timesheet,
+    },
 };
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
@@ -50,8 +52,10 @@ pub fn start_async(
 }
 
 fn prepare_connection() -> Result<SqliteConnection> {
-    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL in env to connect to sqlite");
-    let mut conn = SqliteConnection::establish(&db_url)
+    let mut db_url = get_data_dir();
+    db_url.push("sharkdb.sqlite");
+    let db_url = db_url.to_str().expect("path to convert to string");
+    let mut conn = SqliteConnection::establish(db_url)
         .wrap_err_with(|| format!("connecting to sqlite {db_url}"))?;
 
     debug!("Running any pending migrations now.");
@@ -103,7 +107,7 @@ impl PersistHandler {
                 }
             }
             Err(err) => {
-                error!("Error handling persistence command: {err}")
+                error!("Error handling persistence command: {err:?}")
             }
         }
     }

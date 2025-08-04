@@ -159,7 +159,7 @@ lazy_static! {
         RelevantKey::new("q", "Quit"),
         RelevantKey::new("Space", "Edit"),
         RelevantKey::new("s", "Split"),
-        RelevantKey::new("⇆ ⇵", "Move"),
+        RelevantKey::new("Arrows", "Move"),
     ];
     static ref EDITING_KEYS: Vec<RelevantKey> = vec![
         RelevantKey::new("q", "Quit"),
