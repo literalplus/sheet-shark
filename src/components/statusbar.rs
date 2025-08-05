@@ -12,6 +12,7 @@ use super::Component;
 use crate::{
     action::{Action, RelevantKey},
     layout::LayoutSlot,
+    persist,
 };
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -28,6 +29,14 @@ impl Component for StatusBar {
             _ => {}
         };
         Ok(None)
+    }
+
+    fn handle_persisted(&mut self, event: persist::Event) -> Result<Option<Action>> {
+        if let persist::Event::Failure(msg) = event {
+            Ok(Some(Action::SetStatusLine(format!("⚡ DB error: {msg}"))))
+        } else {
+            Ok(None)
+        }
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {

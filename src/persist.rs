@@ -4,7 +4,7 @@ use color_eyre::{
     Result,
     eyre::{Context, eyre},
 };
-use diesel::{Connection, RunQueryDsl, SqliteConnection};
+use diesel::{Connection, RunQueryDsl, SqliteConnection, prelude::*};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use tokio::{
     runtime::Builder,
@@ -107,7 +107,11 @@ impl PersistHandler {
                 }
             }
             Err(err) => {
-                error!("Error handling persistence command: {err:?}")
+                error!("Error handling persistence command: {err:?}");
+                let event = model::Event::Failure(format!("{err:?}"));
+                if let Err(err) = self.evt_tx.send(event) {
+                    debug!("Unable to send persistence error: {err:?}");
+                }
             }
         }
     }
@@ -115,7 +119,7 @@ impl PersistHandler {
     async fn handle(&mut self, cmd: model::Command) -> Result<model::Event> {
         match cmd {
             model::Command::StoreEntry(entry) => {
-                self.ensure_timesheet_exists(&entry).await?;
+                self.ensure_timesheet_exists(&entry.timesheet_day).await?;
 
                 diesel::insert_into(time_entry::table)
                     .values(&entry)
@@ -126,21 +130,48 @@ impl PersistHandler {
                     .wrap_err("saving time entry")?;
                 Ok(model::Event::EntryStored(TimeEntryId::from_str(&entry.id)?))
             }
+            model::Command::LoadTimesheet { day } => {
+                let timesheet = self.load_or_create_timesheet(&day).await?;
+                let entries = TimeEntry::belonging_to(&timesheet)
+                    .select(TimeEntry::as_select())
+                    .load::<TimeEntry>(&mut self.conn)?;
+                Ok(model::Event::TimesheetLoaded { timesheet, entries })
+            }
         }
     }
 
-    async fn ensure_timesheet_exists(&mut self, entry: &TimeEntry) -> Result<()> {
-        let day = &entry.timesheet_day;
+    async fn ensure_timesheet_exists(&mut self, day: &str) -> Result<()> {
         let sheet = Timesheet {
-            day,
-            status: "OPEN",
+            day: day.to_string(),
+            status: "OPEN".to_string(),
         };
         diesel::insert_into(timesheet::table)
             .values(&sheet)
             .on_conflict(timesheet::day)
             .do_nothing()
             .execute(&mut self.conn)
-            .wrap_err_with(|| format!("trying to ensure timesheet {day} exists"))?;
+            .wrap_err_with(|| format!("ensure timesheet {day} exists"))?;
         Ok(())
+    }
+
+    async fn load_or_create_timesheet(&mut self, day: &str) -> Result<Timesheet> {
+        let loaded = timesheet::table
+            .filter(timesheet::day.eq(day))
+            .select(Timesheet::as_select())
+            .get_result(&mut self.conn)
+            .optional()
+            .wrap_err_with(|| format!("load timesheet {day}"))?;
+        if let Some(loaded) = loaded {
+            return Ok(loaded);
+        }
+        let created = Timesheet {
+            day: day.to_string(),
+            status: "OPEN".to_string(),
+        };
+        diesel::insert_into(timesheet::table)
+            .values(&created)
+            .execute(&mut self.conn)
+            .wrap_err_with(|| format!("create timesheet {day} since it didn't exist"))?;
+        Ok(created)
     }
 }

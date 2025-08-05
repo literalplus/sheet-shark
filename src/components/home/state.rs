@@ -1,13 +1,15 @@
+use std::str::FromStr;
 use std::time::Duration;
 
 use chrono::NaiveTime;
-use humantime::{format_duration, parse_duration};
+use color_eyre::eyre::Context;
+use humantime::format_duration;
 use ratatui::{
     text::Text,
     widgets::{Row, TableState},
 };
 
-use crate::persist::{self, TimeEntryId};
+use crate::persist::{self, TimeEntryId, Timesheet};
 
 pub struct TimeItem {
     pub id: TimeEntryId,
@@ -40,6 +42,20 @@ impl TimeItem {
     }
 }
 
+impl TryFrom<&persist::TimeEntry> for TimeItem {
+    type Error = color_eyre::Report;
+
+    fn try_from(value: &persist::TimeEntry) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: TimeEntryId::from_str(&value.id).wrap_err("TimeEntryId")?,
+            start_time: NaiveTime::from_str(&value.start_time).wrap_err("start_time")?,
+            ticket: "".into(),
+            description: value.description.to_string(),
+            duration: Duration::from_secs(value.duration_mins as u64 * 60),
+        })
+    }
+}
+
 pub const TIME_ITEM_WIDTH: usize = 4;
 
 impl TimeItem {
@@ -69,6 +85,7 @@ impl TimeItem {
 
 pub struct HomeState {
     pub table: TableState,
+    pub timesheet: Option<Timesheet>,
     pub items: Vec<TimeItem>,
 }
 
@@ -76,35 +93,16 @@ impl Default for HomeState {
     fn default() -> Self {
         Self {
             table: TableState::default(),
-            items: vec![
-                TimeItem {
-                    id: TimeEntryId::from_uuid(
-                        "fbbd6f4f-6c6d-40d2-bd9c-4f83b9af1d2b".try_into().unwrap(),
-                    ),
-                    start_time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
-                    ticket: "(W)SCRUM-17".into(),
-                    description: "daily".into(),
-                    duration: parse_duration("1h").unwrap(),
-                },
-                TimeItem {
-                    id: TimeEntryId::from_uuid(
-                        "830a5556-adc8-4a5f-8082-f3186bfdd10c".try_into().unwrap(),
-                    ),
-                    start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-                    ticket: "(W)XAMPL-569".into(),
-                    description: "implementation".into(),
-                    duration: parse_duration("1h").unwrap(),
-                },
-                TimeItem {
-                    id: TimeEntryId::from_uuid(
-                        "17382f77-c973-41e4-a16f-5b4c7fa0193f".try_into().unwrap(),
-                    ),
-                    start_time: NaiveTime::from_hms_opt(11, 0, 0).unwrap(),
-                    ticket: "(W)REFI-12".into(),
-                    description: "tech analysis".into(),
-                    duration: Duration::default(),
-                },
-            ],
+            timesheet: None,
+            items: vec![TimeItem {
+                id: TimeEntryId::from_uuid(
+                    "791d98c7-3be0-455f-8bfb-94769131243c".try_into().unwrap(),
+                ),
+                start_time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+                ticket: "".into(),
+                description: "Loading...".into(),
+                duration: Default::default(),
+            }],
         }
     }
 }

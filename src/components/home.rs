@@ -1,4 +1,4 @@
-use color_eyre::Result;
+use color_eyre::{Result, eyre::Context};
 use crossterm::event::KeyEvent;
 use lazy_static::lazy_static;
 use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
@@ -16,30 +16,12 @@ use crate::{
     persist,
 };
 
+mod action;
 mod editing;
 mod key_handling;
 mod movement;
+mod persist_handling;
 mod state;
-mod action {
-    use color_eyre::eyre::ErrReport;
-
-    use crate::components::home::editing::EditMode;
-
-    #[derive(PartialEq, Eq)]
-    pub enum HomeAction {
-        None,
-        EnterEditSpecific(Option<EditMode>),
-        ExitEdit,
-        SetStatusLine(String),
-        SplitItemDown(usize),
-    }
-
-    impl From<ErrReport> for HomeAction {
-        fn from(value: ErrReport) -> Self {
-            Self::SetStatusLine(format!("{value}"))
-        }
-    }
-}
 
 #[derive(Default)]
 pub struct Home {
@@ -64,6 +46,14 @@ impl Home {
 }
 
 impl Component for Home {
+    fn init(&mut self, _area: Size) -> Result<()> {
+        let sender = self.persist_tx.as_ref().expect("persist to be set on init");
+        let command = persist::Command::LoadTimesheet {
+            day: "1989-12-13".into(),
+        };
+        sender.send(command).wrap_err("sending initial load")
+    }
+
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         self.config = config;
         Ok(())
@@ -85,15 +75,13 @@ impl Component for Home {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        key_handling::handle(self, key)
+        let action = key_handling::handle(self, key);
+        action::perform(self, action)
     }
 
     fn handle_persisted(&mut self, event: persist::Event) -> Result<Option<Action>> {
-        match event {
-            persist::Event::EntryStored(id) => {
-                Ok(Some(Action::SetStatusLine(format!("Stored: {id}"))))
-            }
-        }
+        let action = persist_handling::handle(self, event);
+        action::perform(self, action)
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {

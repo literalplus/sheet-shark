@@ -18,23 +18,19 @@ pub mod statusbar;
 /// receive events, update state, and be rendered on the screen.
 pub trait Component {
     /// Register an action handler that can send actions for processing if necessary.
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
-        let _ = tx; // to appease clippy
+    fn register_action_handler(&mut self, _tx: UnboundedSender<Action>) -> Result<()> {
         Ok(())
     }
     /// Register a command handler that can be used to communicate with the persistence layer.
-    fn register_persist_handler(&mut self, tx: UnboundedSender<persist::Command>) -> Result<()> {
-        let _ = tx; // to appease clippy
+    fn register_persist_handler(&mut self, _tx: UnboundedSender<persist::Command>) -> Result<()> {
         Ok(())
     }
     /// Register a configuration handler that provides configuration settings if necessary.
-    fn register_config_handler(&mut self, config: Config) -> Result<()> {
-        let _ = config; // to appease clippy
+    fn register_config_handler(&mut self, _config: Config) -> Result<()> {
         Ok(())
     }
     /// Initialize the component with a specified area if necessary.
-    fn init(&mut self, area: Size) -> Result<()> {
-        let _ = area; // to appease clippy
+    fn init(&mut self, _area: Size) -> Result<()> {
         Ok(())
     }
     /// Handle incoming events and produce actions if necessary.
@@ -47,23 +43,19 @@ pub trait Component {
         Ok(action)
     }
     /// Handle key events and produce actions if necessary.
-    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        let _ = key; // to appease clippy
+    fn handle_key_event(&mut self, _key: KeyEvent) -> Result<Option<Action>> {
         Ok(None)
     }
     /// Handle mouse events and produce actions if necessary.
-    fn handle_mouse_event(&mut self, mouse: MouseEvent) -> Result<Option<Action>> {
-        let _ = mouse; // to appease clippy
+    fn handle_mouse_event(&mut self, _mouse: MouseEvent) -> Result<Option<Action>> {
         Ok(None)
     }
     /// Handle incoming events and produce actions if necessary.
-    fn handle_persisted(&mut self, event: persist::Event) -> Result<Option<Action>> {
-        let _ = event; // to appease clippy
+    fn handle_persisted(&mut self, _event: persist::Event) -> Result<Option<Action>> {
         Ok(None)
     }
     /// Update the state of the component based on a received action. (REQUIRED)
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        let _ = action; // to appease clippy
+    fn update(&mut self, _action: Action) -> Result<Option<Action>> {
         Ok(None)
     }
     /// Render the component on the screen. (REQUIRED)
