@@ -64,6 +64,7 @@ impl Duration {
         for (idx, item_to_adjust) in state.items.iter_mut().enumerate().skip(my_index + 1) {
             if idx == last_index && item_to_adjust.duration.is_zero() {
                 item_to_adjust.start_time = new_end_time;
+                item_to_adjust.version.touch();
                 break; // duration hasn't been filled yet
             }
 
@@ -76,6 +77,7 @@ impl Duration {
             } else if delta < TimeDelta::zero() {
                 item_to_adjust.start_time += delta; // Actually subtracts; delta < 0
                 item_to_adjust.duration += delta_duration_abs;
+                item_to_adjust.version.touch();
                 break;
             }
 
@@ -86,6 +88,7 @@ impl Duration {
                 Ordering::Greater => {
                     item_to_adjust.duration -= delta_duration_abs;
                     item_to_adjust.start_time = new_end_time;
+                    item_to_adjust.version.touch();
                     break;
                 }
             }
@@ -93,9 +96,7 @@ impl Duration {
 
         if num_items_to_remove > 0 {
             let drain_start = my_index + 1;
-            state
-                .items
-                .drain(drain_start..(drain_start + num_items_to_remove));
+            state.drain_items(drain_start..(drain_start + num_items_to_remove));
         }
     }
 }

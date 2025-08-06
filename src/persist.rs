@@ -118,7 +118,7 @@ impl PersistHandler {
 
     async fn handle(&mut self, cmd: model::Command) -> Result<model::Event> {
         match cmd {
-            model::Command::StoreEntry(entry) => {
+            model::Command::StoreEntry { entry, version } => {
                 self.ensure_timesheet_exists(&entry.timesheet_day).await?;
 
                 diesel::insert_into(time_entry::table)
@@ -128,13 +128,23 @@ impl PersistHandler {
                     .set(&entry)
                     .execute(&mut self.conn)
                     .wrap_err("saving time entry")?;
-                Ok(model::Event::EntryStored(TimeEntryId::from_str(&entry.id)?))
+                Ok(model::Event::EntryStored {
+                    id: TimeEntryId::from_str(&entry.id)?,
+                    version,
+                })
+            }
+            model::Command::DeleteEntry(id) => {
+                diesel::delete(time_entry::table.filter(time_entry::id.eq(id.to_string())))
+                    .execute(&mut self.conn)
+                    .wrap_err("delete entry")?;
+                Ok(model::Event::Deleted)
             }
             model::Command::LoadTimesheet { day } => {
                 let timesheet = self.load_or_create_timesheet(&day).await?;
                 let entries = TimeEntry::belonging_to(&timesheet)
                     .select(TimeEntry::as_select())
-                    .load::<TimeEntry>(&mut self.conn)?;
+                    .load::<TimeEntry>(&mut self.conn)
+                    .wrap_err("loading timesheet entries")?;
                 Ok(model::Event::TimesheetLoaded { timesheet, entries })
             }
         }

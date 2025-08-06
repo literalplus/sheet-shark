@@ -4,6 +4,7 @@ use std::time::Duration;
 use crate::{
     action::Action,
     components::home::{EDITING_KEYS, Home, SELECTING_KEYS, editing::EditMode, state::TimeItem},
+    persist,
 };
 
 #[derive(PartialEq, Eq)]
@@ -36,6 +37,7 @@ pub fn perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
 }
 
 fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
+    save_any_dirty_state(home);
     match action {
         HomeAction::EnterEditSpecific(Some(mode)) => {
             home.state.table.select_column(Some(mode.get_column_num()));
@@ -72,6 +74,32 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
         HomeAction::None => {}
     }
     Ok(None)
+}
+
+fn save_any_dirty_state(home: &mut Home) {
+    let day = home.state.timesheet.clone().map(|it| it.day);
+    if day.is_none() {
+        return;
+    }
+    let day = day.unwrap();
+
+    let mut commands_to_send = vec![];
+    for item in home.state.items.iter_mut() {
+        if item.version.should_save() {
+            commands_to_send.push(persist::Command::StoreEntry {
+                entry: item.to_persist(&day),
+                version: item.version.local,
+            });
+            item.version.mark_sent();
+        }
+    }
+    for to_delete in home.state.items_to_delete.drain(..) {
+        commands_to_send.push(persist::Command::DeleteEntry(to_delete.id));
+    }
+
+    for command in commands_to_send {
+        home.send_persist(command);
+    }
 }
 
 fn split_in_half(n: u64) -> (u64, u64) {

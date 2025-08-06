@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use std::time::Duration;
+use std::{ops::Range, str::FromStr};
 
 use chrono::NaiveTime;
 use color_eyre::eyre::Context;
@@ -10,6 +10,7 @@ use ratatui::{
 };
 
 use crate::persist::{self, TimeEntryId, Timesheet};
+use crate::shared::DataVersion;
 
 pub struct TimeItem {
     pub id: TimeEntryId,
@@ -17,6 +18,7 @@ pub struct TimeItem {
     pub ticket: String,
     pub description: String,
     pub duration: Duration,
+    pub version: DataVersion,
 }
 
 impl TimeItem {
@@ -27,6 +29,7 @@ impl TimeItem {
             duration,
             ticket: Default::default(),
             description: Default::default(),
+            version: DataVersion::fresh(),
         }
     }
 
@@ -52,6 +55,7 @@ impl TryFrom<&persist::TimeEntry> for TimeItem {
             ticket: "".into(),
             description: value.description.to_string(),
             duration: Duration::from_secs(value.duration_mins as u64 * 60),
+            version: DataVersion::loaded(),
         })
     }
 }
@@ -87,6 +91,7 @@ pub struct HomeState {
     pub table: TableState,
     pub timesheet: Option<Timesheet>,
     pub items: Vec<TimeItem>,
+    pub items_to_delete: Vec<TimeItem>,
 }
 
 impl Default for HomeState {
@@ -102,7 +107,9 @@ impl Default for HomeState {
                 ticket: "".into(),
                 description: "Loading...".into(),
                 duration: Default::default(),
+                version: DataVersion::fresh(),
             }],
+            items_to_delete: vec![],
         }
     }
 }
@@ -118,7 +125,9 @@ impl HomeState {
 
     pub fn expect_selected_item_mut(&mut self) -> &mut TimeItem {
         let idx = self.table.selected().unwrap_or(0);
-        self.items.get_mut(idx).expect("the selected item to exist")
+        let item = self.items.get_mut(idx).expect("the selected item to exist");
+        item.version.touch();
+        item
     }
 
     pub fn ensure_column_selected(&mut self) {
@@ -139,5 +148,9 @@ impl HomeState {
 
     pub fn is_last_row_selected(&self) -> bool {
         self.table.selected() == Some(self.items.len() - 1)
+    }
+
+    pub fn drain_items(&mut self, range: Range<usize>) {
+        self.items_to_delete.extend(self.items.drain(range));
     }
 }

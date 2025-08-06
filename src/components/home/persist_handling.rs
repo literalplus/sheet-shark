@@ -7,7 +7,15 @@ use tracing::error;
 
 pub fn handle(home: &mut Home, event: Event) -> HomeAction {
     match event {
-        persist::Event::EntryStored(id) => HomeAction::SetStatusLine(format!("Stored: {id}")),
+        persist::Event::EntryStored { id, version } => {
+            for entry in home.state.items.iter_mut() {
+                if entry.id == id {
+                    entry.version.notify_saved(version);
+                    return HomeAction::SetStatusLine(format!("Stored: {id} v{version}"));
+                }
+            }
+            HomeAction::None
+        }
         persist::Event::TimesheetLoaded { timesheet, entries } => {
             let day = timesheet.day.to_string();
             home.state = into_state(timesheet, entries);
@@ -32,5 +40,6 @@ fn into_state(timesheet: Timesheet, entries: Vec<TimeEntry>) -> HomeState {
         table: TableState::default(),
         timesheet: Some(timesheet),
         items,
+        items_to_delete: vec![],
     }
 }

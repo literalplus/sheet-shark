@@ -17,6 +17,7 @@ mod errors;
 mod layout;
 mod logging;
 mod persist;
+mod shared;
 mod tui;
 
 fn main() -> Result<()> {

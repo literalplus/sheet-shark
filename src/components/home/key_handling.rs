@@ -1,14 +1,11 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 
 use super::Home;
-use crate::{
-    components::home::{
-        action::HomeAction,
-        editing::{EditMode, EditModeBehavior},
-        movement::handle_movement,
-        state::HomeState,
-    },
-    persist,
+use crate::components::home::{
+    action::HomeAction,
+    editing::{EditMode, EditModeBehavior},
+    movement::handle_movement,
+    state::HomeState,
 };
 
 pub fn handle(home: &mut Home, key: KeyEvent) -> HomeAction {
@@ -52,15 +49,8 @@ fn handle_outside_edit(home: &mut Home, key: KeyEvent) -> HomeAction {
             }
         }
         KeyCode::Char('+') => {
-            if let Some(item) = home.state.maybe_selected_item() {
-                let day = &home
-                    .state
-                    .timesheet
-                    .as_ref()
-                    .expect("only save when have day")
-                    .day;
-                let item = item.to_persist(day);
-                home.send_persist(persist::Command::StoreEntry(item));
+            if home.state.table.selected().is_some() {
+                home.state.expect_selected_item_mut().version.touch();
                 return HomeAction::SetStatusLine("Saving!".into());
             }
         }

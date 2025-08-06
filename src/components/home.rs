@@ -1,4 +1,4 @@
-use color_eyre::{Result, eyre::Context};
+use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use lazy_static::lazy_static;
 use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
@@ -47,11 +47,10 @@ impl Home {
 
 impl Component for Home {
     fn init(&mut self, _area: Size) -> Result<()> {
-        let sender = self.persist_tx.as_ref().expect("persist to be set on init");
-        let command = persist::Command::LoadTimesheet {
+        self.send_persist(persist::Command::LoadTimesheet {
             day: "1989-12-13".into(),
-        };
-        sender.send(command).wrap_err("sending initial load")
+        });
+        Ok(())
     }
 
     fn register_config_handler(&mut self, config: Config) -> Result<()> {

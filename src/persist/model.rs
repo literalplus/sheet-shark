@@ -1,17 +1,29 @@
+use crate::shared::DataVersionNumber;
+
 use super::schema::*;
 use diesel::prelude::*;
 use type_safe_id::{StaticType, TypeSafeId};
 
 #[derive(Debug, Clone)]
 pub enum Command {
-    StoreEntry(TimeEntry),
-    LoadTimesheet { day: String },
+    StoreEntry {
+        entry: TimeEntry,
+        version: DataVersionNumber,
+    },
+    DeleteEntry(TimeEntryId),
+    LoadTimesheet {
+        day: String,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum Event {
     Failure(String),
-    EntryStored(TimeEntryId),
+    Deleted,
+    EntryStored {
+        id: TimeEntryId,
+        version: DataVersionNumber,
+    },
     TimesheetLoaded {
         timesheet: Timesheet,
         entries: Vec<TimeEntry>,
@@ -40,7 +52,7 @@ pub struct TimeEntry {
     pub start_time: String,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct TimeEntryMarker;
 pub type TimeEntryId = TypeSafeId<TimeEntryMarker>;
 
