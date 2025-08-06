@@ -143,6 +143,7 @@ impl PersistHandler {
                 let timesheet = self.load_or_create_timesheet(&day).await?;
                 let entries = TimeEntry::belonging_to(&timesheet)
                     .select(TimeEntry::as_select())
+                    .order_by(time_entry::start_time)
                     .load::<TimeEntry>(&mut self.conn)
                     .wrap_err("loading timesheet entries")?;
                 Ok(model::Event::TimesheetLoaded { timesheet, entries })

@@ -23,7 +23,7 @@ impl From<ErrReport> for HomeAction {
 }
 
 pub fn perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
-    match do_perform(home, action) {
+    let result = match do_perform(home, action) {
         result @ Ok(Some(Action::SetStatusLine(_))) => {
             home.need_status_line_reset = true;
             result
@@ -33,11 +33,12 @@ pub fn perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
             Ok(Some(Action::SetStatusLine("".into())))
         }
         result => result,
-    }
+    };
+    save_any_dirty_state(home);
+    result
 }
 
 fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
-    save_any_dirty_state(home);
     match action {
         HomeAction::EnterEditSpecific(Some(mode)) => {
             home.state.table.select_column(Some(mode.get_column_num()));
@@ -58,6 +59,7 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
                 .items
                 .get_mut(idx)
                 .expect("item to split to exist");
+            original_item.version.touch();
             let duration_mins = original_item.duration.as_secs().div_ceil(60);
             if duration_mins <= 1 {
                 return Ok(Some(Action::SetStatusLine("cannot split further!".into())));

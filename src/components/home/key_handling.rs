@@ -48,12 +48,6 @@ fn handle_outside_edit(home: &mut Home, key: KeyEvent) -> HomeAction {
                 return HomeAction::SplitItemDown(idx);
             }
         }
-        KeyCode::Char('+') => {
-            if home.state.table.selected().is_some() {
-                home.state.expect_selected_item_mut().version.touch();
-                return HomeAction::SetStatusLine("Saving!".into());
-            }
-        }
         _ => {}
     }
     HomeAction::None
