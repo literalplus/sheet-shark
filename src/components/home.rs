@@ -1,7 +1,9 @@
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
+use derivative::Derivative;
 use lazy_static::lazy_static;
 use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
+use time::{Date, OffsetDateTime, format_description};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
@@ -23,8 +25,13 @@ mod movement;
 mod persist_handling;
 mod state;
 
-#[derive(Default)]
+#[derive(Derivative)]
+#[derivative(Default)]
 pub struct Home {
+    #[derivative(Default(value = r#"OffsetDateTime::now_local()
+            .expect("find local offset for date")
+            .date()"#))]
+    day: Date,
     config: Config,
     action_tx: Option<UnboundedSender<Action>>,
     persist_tx: Option<UnboundedSender<persist::Command>>,
@@ -47,13 +54,6 @@ impl Home {
 }
 
 impl Component for Home {
-    fn init(&mut self, _area: Size) -> Result<()> {
-        self.send_persist(persist::Command::LoadTimesheet {
-            day: "1989-12-13".into(),
-        });
-        Ok(())
-    }
-
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         self.config = config;
         Ok(())
@@ -66,11 +66,6 @@ impl Component for Home {
 
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.action_tx = Some(tx);
-        self.action_tx
-            .as_mut()
-            .unwrap()
-            .send(Action::SetRelevantKeys(SELECTING_KEYS.to_vec()))
-            .expect("sent initial keys");
         Ok(())
     }
 
@@ -91,10 +86,12 @@ impl Component for Home {
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
         let area = crate::layout::main_vert(LayoutSlot::MainCanvas, area);
 
+        let format = format_description::parse("[year]-[month]-[day]")?;
+        let iso_day = self.day.format(&format)?;
         let block = Block::new()
             .borders(!Borders::BOTTOM)
             .border_type(BorderType::Rounded)
-            .title("📅 1989-12-13");
+            .title(format!("📅 {iso_day}"));
         frame.render_widget(&block, area);
         let area = block.inner(area);
 
@@ -146,22 +143,35 @@ impl Component for Home {
     }
 
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        if let Action::SetActivePage(page) = action {
-            self.suspended = page != Page::Home;
+        match action {
+            Action::SetActivePage(Page::Home { day }) => {
+                self.send_persist(persist::Command::LoadTimesheet { day });
+                self.action_tx
+                    .as_mut()
+                    .unwrap()
+                    .send(Action::SetRelevantKeys(OUTSIDE_KEYS.to_vec()))
+                    .expect("sent initial keys");
+                self.day = day;
+                self.suspended = false;
+            }
+            Action::SetActivePage(_) => {
+                self.suspended = true;
+            }
+            _ => {}
         }
         Ok(None)
     }
 }
 
 lazy_static! {
+    static ref OUTSIDE_KEYS: Vec<RelevantKey> = vec![
+        RelevantKey::new("Arrows", "Move"),
+        RelevantKey::new("Esc", "Exit to calendar"),
+    ];
     static ref SELECTING_KEYS: Vec<RelevantKey> = vec![
-        RelevantKey::new("q", "Quit"),
         RelevantKey::new("Space", "Edit"),
         RelevantKey::new("s", "Split"),
         RelevantKey::new("Arrows", "Move"),
     ];
-    static ref EDITING_KEYS: Vec<RelevantKey> = vec![
-        RelevantKey::new("q", "Quit"),
-        RelevantKey::new("^", "Clear"),
-    ];
+    static ref EDITING_KEYS: Vec<RelevantKey> = vec![RelevantKey::new("^", "Clear"),];
 }

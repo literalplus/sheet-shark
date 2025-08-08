@@ -1,4 +1,5 @@
 use strum::Display;
+use time::{Date, OffsetDateTime};
 
 #[derive(Debug, Clone, PartialEq, Eq, Display)]
 pub enum Action {
@@ -30,9 +31,17 @@ impl RelevantKey {
     }
 }
 
-
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Page {
-    #[default]
-    Home,
+    Home { day: Date },
+    Calendar { day: Date },
+}
+
+impl Default for Page {
+    fn default() -> Self {
+        let today = OffsetDateTime::now_local()
+            .expect("find local offset for date")
+            .date();
+        Page::Home { day: today }
+    }
 }

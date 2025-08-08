@@ -6,6 +6,7 @@ use color_eyre::{
 };
 use diesel::{Connection, RunQueryDsl, SqliteConnection, prelude::*};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
+use time::{Date, format_description};
 use tokio::{
     runtime::Builder,
     select,
@@ -140,7 +141,7 @@ impl PersistHandler {
                 Ok(model::Event::Deleted)
             }
             model::Command::LoadTimesheet { day } => {
-                let timesheet = self.load_or_create_timesheet(&day).await?;
+                let timesheet = self.load_or_create_timesheet(day).await?;
                 let entries = TimeEntry::belonging_to(&timesheet)
                     .select(TimeEntry::as_select())
                     .order_by(time_entry::start_time)
@@ -165,9 +166,11 @@ impl PersistHandler {
         Ok(())
     }
 
-    async fn load_or_create_timesheet(&mut self, day: &str) -> Result<Timesheet> {
+    async fn load_or_create_timesheet(&mut self, day: Date) -> Result<Timesheet> {
+        let format = format_description::parse("[year]-[month]-[day]")?;
+        let iso_day = day.format(&format)?;
         let loaded = timesheet::table
-            .filter(timesheet::day.eq(day))
+            .filter(timesheet::day.eq(iso_day))
             .select(Timesheet::as_select())
             .get_result(&mut self.conn)
             .optional()

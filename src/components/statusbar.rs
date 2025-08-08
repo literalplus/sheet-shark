@@ -25,7 +25,10 @@ impl Component for StatusBar {
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
             Action::SetStatusLine(msg) => self.status_line = msg,
-            Action::SetRelevantKeys(keys) => self.keys = keys,
+            Action::SetRelevantKeys(mut keys) => {
+                keys.insert(0, RelevantKey::new("q", "Quit"));
+                self.keys = keys;
+            }
             _ => {}
         };
         Ok(None)

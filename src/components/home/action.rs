@@ -2,7 +2,7 @@ use color_eyre::eyre::{ErrReport, Result};
 use std::time::Duration;
 
 use crate::{
-    action::Action,
+    action::{Action, Page},
     components::home::{EDITING_KEYS, Home, SELECTING_KEYS, editing::EditMode, state::TimeItem},
     persist,
 };
@@ -10,8 +10,12 @@ use crate::{
 #[derive(PartialEq, Eq)]
 pub enum HomeAction {
     None,
+
     EnterEditSpecific(Option<EditMode>),
+    EnterSelect,
+    ExitToCalendar,
     ExitEdit,
+
     SetStatusLine(String),
     SplitItemDown(usize),
     MergeItemDown(usize),
@@ -48,6 +52,9 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
         }
         HomeAction::EnterEditSpecific(None) => {
             return Ok(Some(Action::SetStatusLine("⛔⛔⛔".into())));
+        }
+        HomeAction::EnterSelect => {
+            return Ok(Some(Action::SetRelevantKeys(SELECTING_KEYS.to_vec())));
         }
         HomeAction::ExitEdit => {
             home.edit_mode = None;
@@ -87,6 +94,11 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
             remaining_item.duration += obsolete_item.duration;
             remaining_item.description += &format!(" / {}", obsolete_item.description);
             home.state.items_to_delete.push(obsolete_item);
+        }
+        HomeAction::ExitToCalendar => {
+            return Ok(Some(Action::SetActivePage(Page::Calendar {
+                day: home.day,
+            })));
         }
         HomeAction::None => {}
     }

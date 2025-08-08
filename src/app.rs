@@ -5,8 +5,10 @@ use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::debug;
 
 use crate::{
-    action::Action,
-    components::{Component, fps::FpsCounter, home::Home, statusbar::StatusBar},
+    action::{Action, Page},
+    components::{
+        Component, calendar::Calendar, fps::FpsCounter, home::Home, statusbar::StatusBar,
+    },
     config::Config,
     persist,
     tui::{Event, Tui},
@@ -38,6 +40,7 @@ impl App {
             frame_rate,
             components: vec![
                 Box::new(Home::default()),
+                Box::new(Calendar::default()),
                 Box::new(FpsCounter::default()),
                 Box::new(StatusBar::default()),
             ],
@@ -72,6 +75,7 @@ impl App {
         }
 
         let action_tx = self.action_tx.clone();
+        action_tx.send(Action::SetActivePage(Page::default()))?;
         loop {
             self.handle_events(&mut tui).await?;
             self.handle_persisted().await?;

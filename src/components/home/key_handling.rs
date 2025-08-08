@@ -1,11 +1,15 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 
 use super::Home;
-use crate::components::home::{
-    action::HomeAction,
-    editing::{EditMode, EditModeBehavior},
-    movement::handle_movement,
-    state::HomeState,
+use crate::{
+    action::Action,
+    components::home::{
+        OUTSIDE_KEYS,
+        action::HomeAction,
+        editing::{EditMode, EditModeBehavior},
+        movement::handle_movement,
+        state::HomeState,
+    },
 };
 
 pub fn handle(home: &mut Home, key: KeyEvent) -> HomeAction {
@@ -29,13 +33,27 @@ fn handle_outside_edit(home: &mut Home, key: KeyEvent) -> HomeAction {
     if let Some(next_mode) = handle_jump_key(state, key) {
         return HomeAction::EnterEditSpecific(Some(next_mode));
     }
-    handle_movement(state, key);
+    let already_selecting = state.table.selected().is_some();
+    if handle_movement(state, key) && !already_selecting {
+        return HomeAction::EnterSelect;
+    }
     match key.code {
         KeyCode::End => {
             state.table.select_last();
             state.table.select_last_column();
         }
-        KeyCode::Esc => state.table.select(None),
+        KeyCode::Esc => {
+            if state.table.selected().is_some() {
+                state.table.select(None);
+                let _ = home
+                    .action_tx
+                    .as_mut()
+                    .unwrap()
+                    .send(Action::SetRelevantKeys(OUTSIDE_KEYS.to_vec()));
+            } else {
+                return HomeAction::ExitToCalendar;
+            }
+        }
         KeyCode::Char(' ') => {
             let mode_opt = state
                 .table

@@ -2,6 +2,7 @@ use crate::shared::DataVersionNumber;
 
 use super::schema::*;
 use diesel::prelude::*;
+use time::Date;
 use type_safe_id::{StaticType, TypeSafeId};
 
 #[derive(Debug, Clone)]
@@ -12,7 +13,7 @@ pub enum Command {
     },
     DeleteEntry(TimeEntryId),
     LoadTimesheet {
-        day: String,
+        day: Date,
     },
 }
 
