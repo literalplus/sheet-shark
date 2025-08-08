@@ -1,7 +1,11 @@
 use std::time::Duration;
 
 use crate::{
-    components::home::{action::HomeAction, state::{HomeState, TimeItem}, Home},
+    components::home::{
+        Home,
+        action::HomeAction,
+        state::{HomeState, TimeItem},
+    },
     persist::{self, Event, TimeEntry, Timesheet},
 };
 use chrono::NaiveTime;
@@ -24,7 +28,9 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             home.state = into_state(timesheet, entries);
             if home.state.items.is_empty() {
                 // Without an initial item it's not possible to add one
-                home.state.items.push(TimeItem::new(Duration::ZERO, NaiveTime::MIN));
+                home.state
+                    .items
+                    .push(TimeItem::new(Duration::ZERO, NaiveTime::MIN));
             }
             HomeAction::SetStatusLine(format!("Loaded: {day}"))
         }
