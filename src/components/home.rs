@@ -6,7 +6,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
 use crate::{
-    action::{Action, RelevantKey},
+    action::{Action, Page, RelevantKey},
     components::home::{
         editing::{EditMode, EditModeBehavior},
         state::HomeState,
@@ -30,6 +30,7 @@ pub struct Home {
     persist_tx: Option<UnboundedSender<persist::Command>>,
 
     edit_mode: Option<EditMode>,
+    suspended: bool,
     state: HomeState,
 
     need_status_line_reset: bool,
@@ -71,6 +72,10 @@ impl Component for Home {
             .send(Action::SetRelevantKeys(SELECTING_KEYS.to_vec()))
             .expect("sent initial keys");
         Ok(())
+    }
+
+    fn is_suspended(&self) -> bool {
+        self.suspended
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
@@ -138,6 +143,13 @@ impl Component for Home {
 
         frame.render_stateful_widget(table, area, &mut self.state.table);
         Ok(())
+    }
+
+    fn update(&mut self, action: Action) -> Result<Option<Action>> {
+        if let Action::SetActivePage(page) = action {
+            self.suspended = page != Page::Home;
+        }
+        Ok(None)
     }
 }
 

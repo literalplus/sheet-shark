@@ -1,7 +1,6 @@
-use serde::{Deserialize, Serialize};
 use strum::Display;
 
-#[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Display)]
 pub enum Action {
     Tick,
     Render,
@@ -11,12 +10,12 @@ pub enum Action {
     Quit,
     ClearScreen,
     Error(String),
-    Help,
     SetStatusLine(String),
     SetRelevantKeys(Vec<RelevantKey>),
+    SetActivePage(Page),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RelevantKey {
     pub key: String,
     pub text: String,
@@ -29,4 +28,11 @@ impl RelevantKey {
             text: text.to_owned(),
         }
     }
+}
+
+
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Page {
+    #[default]
+    Home,
 }

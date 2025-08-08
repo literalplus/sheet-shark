@@ -33,6 +33,11 @@ pub trait Component {
     fn init(&mut self, _area: Size) -> Result<()> {
         Ok(())
     }
+    /// Whether the component is suspended, i.e. should not be rendered and should not receive events.
+    /// This is handled upstream and the component does not need to check again.
+    fn is_suspended(&self) -> bool {
+        false
+    }
     /// Handle incoming events and produce actions if necessary.
     fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>> {
         let action = match event {

@@ -1,9 +1,8 @@
 use color_eyre::Result;
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::prelude::Rect;
-use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     action::Action,
@@ -20,18 +19,10 @@ pub struct App {
     components: Vec<Box<dyn Component>>,
     should_quit: bool,
     should_suspend: bool,
-    mode: Mode,
-    last_tick_key_events: Vec<KeyEvent>,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
     persist_tx: UnboundedSender<persist::Command>,
     persisted_rx: UnboundedReceiver<persist::Event>,
-}
-
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Mode {
-    #[default]
-    Home,
 }
 
 impl App {
@@ -53,8 +44,6 @@ impl App {
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
-            mode: Mode::Home,
-            last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,
             persist_tx,
@@ -109,7 +98,6 @@ impl App {
         };
         let action_tx = self.action_tx.clone();
         match event {
-            Event::Quit => action_tx.send(Action::Quit)?,
             Event::Tick => action_tx.send(Action::Tick)?,
             Event::Render => action_tx.send(Action::Render)?,
             Event::Resize(x, y) => action_tx.send(Action::Resize(x, y))?,
@@ -117,7 +105,9 @@ impl App {
             _ => {}
         }
         for component in self.components.iter_mut() {
-            if let Some(action) = component.handle_events(Some(event.clone()))? {
+            if component.is_suspended() {
+                continue;
+            } else if let Some(action) = component.handle_events(Some(event.clone()))? {
                 action_tx.send(action)?;
             }
         }
@@ -125,26 +115,15 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
-        let Some(keymap) = self.config.keybindings.get(&self.mode) else {
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        let action = if key.code == KeyCode::Char('q') || (ctrl && key.code == KeyCode::Char('c')) {
+            Action::Quit
+        } else if ctrl && key.code == KeyCode::Char('z') {
+            Action::Suspend
+        } else {
             return Ok(());
         };
-        match keymap.get(&vec![key]) {
-            Some(action) => {
-                info!("Got action: {action:?}");
-                self.action_tx.send(action.clone())?;
-            }
-            _ => {
-                // If the key was not handled as a single key action,
-                // then consider it for multi-key combinations.
-                self.last_tick_key_events.push(key);
-
-                // Check for multi-key combinations
-                if let Some(action) = keymap.get(&self.last_tick_key_events) {
-                    info!("Got action: {action:?}");
-                    self.action_tx.send(action.clone())?;
-                }
-            }
-        }
+        self.action_tx.send(action)?;
         Ok(())
     }
 
@@ -166,9 +145,6 @@ impl App {
                 debug!("{action:?}");
             }
             match action {
-                Action::Tick => {
-                    self.last_tick_key_events.drain(..);
-                }
                 Action::Quit => self.should_quit = true,
                 Action::Suspend => self.should_suspend = true,
                 Action::Resume => self.should_suspend = false,
@@ -195,7 +171,9 @@ impl App {
     fn render(&mut self, tui: &mut Tui) -> Result<()> {
         tui.draw(|frame| {
             for component in self.components.iter_mut() {
-                if let Err(err) = component.draw(frame, frame.area()) {
+                if component.is_suspended() {
+                    continue;
+                } else if let Err(err) = component.draw(frame, frame.area()) {
                     let _ = self
                         .action_tx
                         .send(Action::Error(format!("Failed to draw: {err:?}")));
