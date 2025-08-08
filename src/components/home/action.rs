@@ -14,6 +14,7 @@ pub enum HomeAction {
     ExitEdit,
     SetStatusLine(String),
     SplitItemDown(usize),
+    MergeItemDown(usize),
 }
 
 impl From<ErrReport> for HomeAction {
@@ -72,6 +73,20 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
             );
             original_item.start_time += new_item.duration;
             home.state.items.insert(idx, new_item);
+        }
+        HomeAction::MergeItemDown(idx) => {
+            let items = &mut home.state.items;
+            let obsolete_item = items.drain((idx + 1)..(idx + 2)).next();
+            let obsolete_item = if let Some(it) = obsolete_item {
+                it
+            } else {
+                return Ok(Some(Action::SetStatusLine("no item to merge with".into())));
+            };
+            let remaining_item = items.get_mut(idx).expect("item to split to exist");
+            remaining_item.version.touch();
+            remaining_item.duration += obsolete_item.duration;
+            remaining_item.description += &format!(" / {}", obsolete_item.description);
+            home.state.items_to_delete.push(obsolete_item);
         }
         HomeAction::None => {}
     }

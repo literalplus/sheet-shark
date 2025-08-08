@@ -48,6 +48,11 @@ fn handle_outside_edit(home: &mut Home, key: KeyEvent) -> HomeAction {
                 return HomeAction::SplitItemDown(idx);
             }
         }
+        KeyCode::Char('S') => {
+            if let Some(idx) = state.table.selected() {
+                return HomeAction::MergeItemDown(idx);
+            }
+        }
         _ => {}
     }
     HomeAction::None
