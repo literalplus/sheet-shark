@@ -82,9 +82,6 @@ impl Component for Calendar {
         frame.render_widget(&block, area);
         let area = block.inner(area);
 
-        let calendar_width = 3 * 7;
-        let area = Layout::horizontal([Constraint::Max(calendar_width)]).split(area)[0];
-
         let header_style = Style::default()
             .add_modifier(Modifier::BOLD)
             .fg(Color::Green);
@@ -99,7 +96,19 @@ impl Component for Calendar {
         .show_month_header(header_style)
         .default_style(default_style);
 
-        frame.render_widget(cal, area);
+        let calendar_width = 3 * 7;
+        let layout = Layout::horizontal([Constraint::Max(calendar_width + 1), Constraint::Fill(1)]);
+        let [calendar_area, detail_area] = (*layout.split(area)).try_into().unwrap();
+        frame.render_widget(cal, calendar_area);
+
+        let detail_block = Block::new()
+            .borders(Borders::LEFT)
+            .padding(Padding::uniform(1));
+        frame.render_widget(&detail_block, detail_area);
+        let detail_area = detail_block.inner(detail_area);
+        let text = Text::from("sample text");
+        frame.render_widget(text, detail_area);
+
         Ok(())
     }
 
