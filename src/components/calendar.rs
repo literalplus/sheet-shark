@@ -3,25 +3,29 @@ use crossterm::event::{KeyCode, KeyEvent};
 use lazy_static::lazy_static;
 use ratatui::{
     prelude::*,
+    style::palette::tailwind,
     widgets::{
         calendar::{CalendarEventStore, Monthly},
         *,
     },
 };
-use time::{Date, Duration, OffsetDateTime, Weekday, ext::NumericalDuration};
+use time::{Date, Duration, OffsetDateTime, Weekday, ext::NumericalDuration, format_description};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
 use crate::{
     action::{Action, Page, RelevantKey},
     layout::LayoutSlot,
+    persist::{self, Command, Event},
 };
 
 pub struct Calendar {
     action_tx: Option<UnboundedSender<Action>>,
+    persist_tx: Option<UnboundedSender<Command>>,
 
     suspended: bool,
     day: Date,
+    days_with_timesheets: Vec<Date>,
 }
 
 impl Default for Calendar {
@@ -31,8 +35,10 @@ impl Default for Calendar {
             .date();
         Self {
             action_tx: Default::default(),
+            persist_tx: Default::default(),
             suspended: false,
             day: selected_date,
+            days_with_timesheets: vec![],
         }
     }
 }
@@ -43,54 +49,26 @@ impl Component for Calendar {
         Ok(())
     }
 
+    fn register_persist_handler(&mut self, tx: UnboundedSender<persist::Command>) -> Result<()> {
+        self.persist_tx = Some(tx);
+        Ok(())
+    }
+
     fn is_suspended(&self) -> bool {
         self.suspended
     }
 
+    fn init(&mut self, _area: Size) -> Result<()> {
+        self.fetch_timesheets()?;
+        Ok(())
+    }
+
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match key.code {
-            KeyCode::PageUp => {
-                self.day = self
-                    .day
-                    .checked_sub(Duration::days(365))
-                    .expect("not to reach the big bang");
-            }
-            KeyCode::Up => {
-                self.day = self
-                    .day
-                    .checked_sub(Duration::days(7))
-                    .expect("not to reach the big bang");
-            }
-            KeyCode::Left => {
-                self.day = self
-                    .day
-                    .checked_sub(Duration::days(1))
-                    .expect("not to reach the big bang");
-            }
-            KeyCode::Right => {
-                self.day = self
-                    .day
-                    .checked_add(Duration::days(1))
-                    .expect("time not to end");
-            }
-            KeyCode::Down => {
-                self.day = self
-                    .day
-                    .checked_add(Duration::days(7))
-                    .expect("time not to end");
-            }
-            KeyCode::PageDown => {
-                self.day = self
-                    .day
-                    .checked_add(Duration::days(365))
-                    .expect("time not to end");
-            }
-            KeyCode::Enter => {
-                return Ok(Some(Action::SetActivePage(Page::Home { day: self.day })));
-            }
-            _ => {}
+            _ if self.handle_day_movement(key) => Ok(None),
+            KeyCode::Enter => Ok(Some(Action::SetActivePage(Page::Home { day: self.day }))),
+            _ => Ok(None),
         }
-        Ok(None)
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
@@ -125,6 +103,21 @@ impl Component for Calendar {
         Ok(())
     }
 
+    fn handle_persisted(&mut self, event: persist::Event) -> Result<Option<Action>> {
+        if let Event::TimesheetsOfMonthLoaded { day, timesheets } = event
+            && day == self.day
+        {
+            self.days_with_timesheets = vec![];
+            let format = format_description::parse("[year]-[month]-[day]")?;
+            for timesheet in timesheets {
+                if let Ok(day) = Date::parse(&timesheet.day, &format) {
+                    self.days_with_timesheets.push(day);
+                }
+            }
+        }
+        Ok(None)
+    }
+
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
             Action::SetActivePage(Page::Calendar { day }) => {
@@ -146,6 +139,31 @@ impl Component for Calendar {
 }
 
 impl Calendar {
+    fn handle_day_movement(&mut self, key: KeyEvent) -> bool {
+        let new_day = match key.code {
+            KeyCode::PageUp => self.day.checked_sub(Duration::days(365)),
+            KeyCode::Up => self.day.checked_sub(Duration::days(7)),
+            KeyCode::Left => self.day.checked_sub(Duration::days(1)),
+            KeyCode::Right => self.day.checked_add(Duration::days(1)),
+            KeyCode::Down => self.day.checked_add(Duration::days(7)),
+            KeyCode::PageDown => self.day.checked_add(Duration::days(365)),
+            _ => return false,
+        }
+        .expect("date math not to overflow");
+        self.day = new_day;
+        let _ = self.fetch_timesheets();
+        true
+    }
+
+    fn fetch_timesheets(&mut self) -> Result<()> {
+        self.persist_tx
+            .as_mut()
+            .expect("persist tx")
+            .send(Command::LoadTimesheetsOfMonth { day: self.day })?;
+        self.days_with_timesheets = vec![];
+        Ok(())
+    }
+
     fn make_dates(&self) -> CalendarEventStore {
         let mut events = CalendarEventStore::default();
         let today = OffsetDateTime::now_local().expect("today").date();
@@ -159,6 +177,13 @@ impl Calendar {
             current_day = current_day
                 .checked_add(1.days())
                 .expect("not to exceed date range");
+        }
+
+        for day_with_timesheet in self.days_with_timesheets.iter() {
+            events.add(
+                *day_with_timesheet,
+                Style::default().fg(tailwind::CYAN.c500),
+            );
         }
 
         events.add(

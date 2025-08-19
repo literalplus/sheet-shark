@@ -1,12 +1,9 @@
-use std::str::FromStr;
-
 use color_eyre::{
     Result,
     eyre::{Context, eyre},
 };
-use diesel::{Connection, RunQueryDsl, SqliteConnection, prelude::*};
+use diesel::{Connection, SqliteConnection};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use time::{Date, format_description};
 use tokio::{
     runtime::Builder,
     select,
@@ -15,17 +12,12 @@ use tokio::{
 };
 use tracing::{debug, error, info, warn};
 
+mod handle;
 pub mod model;
 mod schema;
 pub use model::*;
 
-use crate::{
-    config::get_data_dir,
-    persist::schema::{
-        time_entry::{self},
-        timesheet,
-    },
-};
+use crate::config::get_data_dir;
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -101,7 +93,7 @@ impl PersistHandler {
     }
 
     async fn try_handle(&mut self, cmd: model::Command) {
-        match self.handle(cmd).await {
+        match handle::handle(&mut self.conn, cmd).await {
             Ok(event) => {
                 if let Err(err) = self.evt_tx.send(event) {
                     debug!("Unable to send persistence event: {err:?}");
@@ -115,77 +107,5 @@ impl PersistHandler {
                 }
             }
         }
-    }
-
-    async fn handle(&mut self, cmd: model::Command) -> Result<model::Event> {
-        match cmd {
-            model::Command::StoreEntry { entry, version } => {
-                self.ensure_timesheet_exists(&entry.timesheet_day).await?;
-
-                diesel::insert_into(time_entry::table)
-                    .values(&entry)
-                    .on_conflict(time_entry::id)
-                    .do_update()
-                    .set(&entry)
-                    .execute(&mut self.conn)
-                    .wrap_err("saving time entry")?;
-                Ok(model::Event::EntryStored {
-                    id: TimeEntryId::from_str(&entry.id)?,
-                    version,
-                })
-            }
-            model::Command::DeleteEntry(id) => {
-                diesel::delete(time_entry::table.filter(time_entry::id.eq(id.to_string())))
-                    .execute(&mut self.conn)
-                    .wrap_err("delete entry")?;
-                Ok(model::Event::Deleted)
-            }
-            model::Command::LoadTimesheet { day } => {
-                let timesheet = self.load_or_create_timesheet(day).await?;
-                let entries = TimeEntry::belonging_to(&timesheet)
-                    .select(TimeEntry::as_select())
-                    .order_by(time_entry::start_time)
-                    .load::<TimeEntry>(&mut self.conn)
-                    .wrap_err("loading timesheet entries")?;
-                Ok(model::Event::TimesheetLoaded { timesheet, entries })
-            }
-        }
-    }
-
-    async fn ensure_timesheet_exists(&mut self, day: &str) -> Result<()> {
-        let sheet = Timesheet {
-            day: day.to_string(),
-            status: "OPEN".to_string(),
-        };
-        diesel::insert_into(timesheet::table)
-            .values(&sheet)
-            .on_conflict(timesheet::day)
-            .do_nothing()
-            .execute(&mut self.conn)
-            .wrap_err_with(|| format!("ensure timesheet {day} exists"))?;
-        Ok(())
-    }
-
-    async fn load_or_create_timesheet(&mut self, day: Date) -> Result<Timesheet> {
-        let format = format_description::parse("[year]-[month]-[day]")?;
-        let iso_day = day.format(&format)?;
-        let loaded = timesheet::table
-            .filter(timesheet::day.eq(iso_day))
-            .select(Timesheet::as_select())
-            .get_result(&mut self.conn)
-            .optional()
-            .wrap_err_with(|| format!("load timesheet {day}"))?;
-        if let Some(loaded) = loaded {
-            return Ok(loaded);
-        }
-        let created = Timesheet {
-            day: day.to_string(),
-            status: "OPEN".to_string(),
-        };
-        diesel::insert_into(timesheet::table)
-            .values(&created)
-            .execute(&mut self.conn)
-            .wrap_err_with(|| format!("create timesheet {day} since it didn't exist"))?;
-        Ok(created)
     }
 }

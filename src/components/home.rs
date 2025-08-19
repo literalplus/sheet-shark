@@ -1,6 +1,6 @@
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
-use derivative::Derivative;
+use educe::Educe;
 use lazy_static::lazy_static;
 use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
 use time::{Date, OffsetDateTime, format_description};
@@ -25,12 +25,12 @@ mod movement;
 mod persist_handling;
 mod state;
 
-#[derive(Derivative)]
-#[derivative(Default)]
+#[derive(Educe)]
+#[educe(Default)]
 pub struct Home {
-    #[derivative(Default(value = r#"OffsetDateTime::now_local()
+    #[educe(Default(expression = OffsetDateTime::now_local()
             .expect("find local offset for date")
-            .date()"#))]
+            .date()))]
     day: Date,
     config: Config,
     action_tx: Option<UnboundedSender<Action>>,
@@ -86,7 +86,8 @@ impl Component for Home {
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
         let area = crate::layout::main_vert(LayoutSlot::MainCanvas, area);
 
-        let format = format_description::parse("[weekday], [year]-[month]-[day] (KW [week_number])")?;
+        let format =
+            format_description::parse("[weekday], [year]-[month]-[day] (KW [week_number])")?;
         let iso_day = self.day.format(&format)?;
         let block = Block::new()
             .borders(!Borders::BOTTOM)

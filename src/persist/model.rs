@@ -15,6 +15,9 @@ pub enum Command {
     LoadTimesheet {
         day: Date,
     },
+    LoadTimesheetsOfMonth {
+        day: Date,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -28,6 +31,10 @@ pub enum Event {
     TimesheetLoaded {
         timesheet: Timesheet,
         entries: Vec<TimeEntry>,
+    },
+    TimesheetsOfMonthLoaded {
+        day: Date,
+        timesheets: Vec<Timesheet>,
     },
 }
 

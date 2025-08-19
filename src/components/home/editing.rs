@@ -3,7 +3,9 @@ use enum_dispatch::enum_dispatch;
 use ratatui::widgets::{Row, Table};
 
 use crate::components::home::{
-    action::HomeAction, editing::project::Project, state::{HomeState, TimeItem}
+    action::HomeAction,
+    editing::project::Project,
+    state::{HomeState, TimeItem},
 };
 
 mod shared;
@@ -11,8 +13,8 @@ pub(super) use shared::EditModeBehavior;
 
 mod description;
 mod duration;
-mod ticket;
 mod project;
+mod ticket;
 mod time;
 
 use self::{description::Description, duration::Duration, ticket::Ticket, time::Time};
