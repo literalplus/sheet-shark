@@ -35,7 +35,7 @@ impl EditModeBehavior for Description {
 
     fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
         let mut cells = item.as_cells().clone();
-        cells[2] = Text::from(self.buf.to_owned());
+        cells[3] = Text::from(self.buf.to_owned());
         Row::new(cells)
     }
 

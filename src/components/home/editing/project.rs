@@ -12,30 +12,30 @@ use crate::components::home::{
     state::{HomeState, TimeItem},
 };
 
-pub struct Ticket {
+pub struct Project {
     buf: BufEditBehavior,
 }
 
-impl Ticket {
+impl Project {
     pub fn new(state: &HomeState) -> Self {
         let item = state.expect_selected_item();
         Self {
-            buf: BufEditBehavior::new(item.ticket.to_owned()),
+            buf: BufEditBehavior::new(item.project.to_owned()),
         }
     }
 }
 
-impl EditModeBehavior for Ticket {
+impl EditModeBehavior for Project {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
         if self.buf.should_save(key) {
-            state.expect_selected_item_mut().ticket = self.buf.to_owned();
+            state.expect_selected_item_mut().project = self.buf.to_owned();
         }
         self.buf.handle_key_event(state, key)
     }
 
     fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
         let mut cells = item.as_cells().clone();
-        cells[2] = Text::from(self.buf.to_owned());
+        cells[1] = Text::from(self.buf.to_owned());
         Row::new(cells)
     }
 

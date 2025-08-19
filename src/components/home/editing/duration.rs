@@ -117,7 +117,7 @@ impl EditModeBehavior for Duration {
         if content.is_empty() {
             content = "...".into();
         }
-        cells[3] = Text::from(content);
+        cells[4] = Text::from(content);
         Row::new(cells)
     }
 

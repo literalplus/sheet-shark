@@ -65,7 +65,7 @@ impl TryFrom<&persist::TimeEntry> for TimeItem {
     }
 }
 
-pub const TIME_ITEM_WIDTH: usize = 4;
+pub const TIME_ITEM_WIDTH: usize = 5;
 
 impl TimeItem {
     pub fn as_row<'a>(&'a self) -> Row<'a> {
@@ -81,6 +81,7 @@ impl TimeItem {
         };
         [
             Text::from(self.start_time.format("%H:%M").to_string()),
+            Text::from(&self.project as &str),
             Text::from(&self.ticket as &str),
             Text::from(&self.description as &str),
             Text::from(formatted_duration),

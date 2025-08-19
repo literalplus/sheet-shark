@@ -86,7 +86,7 @@ impl Component for Home {
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
         let area = crate::layout::main_vert(LayoutSlot::MainCanvas, area);
 
-        let format = format_description::parse("[year]-[month]-[day]")?;
+        let format = format_description::parse("[weekday], [year]-[month]-[day] (KW [week_number])")?;
         let iso_day = self.day.format(&format)?;
         let block = Block::new()
             .borders(!Borders::BOTTOM)
@@ -95,7 +95,7 @@ impl Component for Home {
         frame.render_widget(&block, area);
         let area = block.inner(area);
 
-        let header = ["#", "Ticket", "dEscription", "Duration"]
+        let header = ["#", "", "Ticket", "Description", "Duration"]
             .into_iter()
             .map(Cell::from)
             .collect::<Row>()
@@ -120,6 +120,7 @@ impl Component for Home {
             [
                 // + 1 is for padding.
                 Constraint::Length(5),
+                Constraint::Length(3),
                 Constraint::Max(20),
                 Constraint::Fill(1),
                 Constraint::Max(10),
