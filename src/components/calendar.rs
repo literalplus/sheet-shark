@@ -8,7 +8,7 @@ use ratatui::{
         *,
     },
 };
-use time::{Date, Duration, OffsetDateTime};
+use time::{Date, Duration, OffsetDateTime, Weekday, ext::NumericalDuration};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
@@ -147,7 +147,22 @@ impl Component for Calendar {
 
 impl Calendar {
     fn make_dates(&self) -> CalendarEventStore {
-        let mut events = CalendarEventStore::today(
+        let mut events = CalendarEventStore::default();
+        let today = OffsetDateTime::now_local().expect("today").date();
+
+        let first_of_month = today.replace_day(1).expect("first of month");
+        let mut current_day = first_of_month;
+        while current_day.month() == today.month() {
+            if matches!(current_day.weekday(), Weekday::Sunday | Weekday::Saturday) {
+                events.add(current_day, Style::default().dim());
+            }
+            current_day = current_day
+                .checked_add(1.days())
+                .expect("not to exceed date range");
+        }
+
+        events.add(
+            today,
             Style::default()
                 .add_modifier(Modifier::BOLD)
                 .bg(Color::Blue),
