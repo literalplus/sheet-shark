@@ -48,6 +48,10 @@ pub struct Timesheet {
 pub struct TimeEntry {
     pub id: String,
     pub timesheet_day: String,
+
+    pub project_key: Option<String>,
+    pub ticket_key: Option<String>,
+
     pub duration_mins: i32,
     pub description: String,
     pub start_time: String,

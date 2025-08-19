@@ -15,6 +15,7 @@ use crate::shared::DataVersion;
 pub struct TimeItem {
     pub id: TimeEntryId,
     pub start_time: NaiveTime,
+    pub project: String,
     pub ticket: String,
     pub description: String,
     pub duration: Duration,
@@ -28,6 +29,7 @@ impl TimeItem {
             start_time,
             duration,
             ticket: Default::default(),
+            project: Default::default(),
             description: Default::default(),
             version: DataVersion::fresh(),
         }
@@ -39,6 +41,8 @@ impl TimeItem {
             id: self.id.to_string(),
             timesheet_day: day.to_string(),
             duration_mins,
+            ticket_key: Some(self.ticket.to_string()).filter(|it| !it.is_empty()),
+            project_key: Some(self.project.to_string()).filter(|it| !it.is_empty()),
             description: self.description.to_string(),
             start_time: self.start_time.format("%H:%M").to_string(),
         }
@@ -52,7 +56,8 @@ impl TryFrom<&persist::TimeEntry> for TimeItem {
         Ok(Self {
             id: TimeEntryId::from_str(&value.id).wrap_err("TimeEntryId")?,
             start_time: NaiveTime::from_str(&value.start_time).wrap_err("start_time")?,
-            ticket: "".into(),
+            ticket: value.ticket_key.clone().unwrap_or_default(),
+            project: value.project_key.clone().unwrap_or_default(),
             description: value.description.to_string(),
             duration: Duration::from_secs(value.duration_mins as u64 * 60),
             version: DataVersion::loaded(),
@@ -105,6 +110,7 @@ impl Default for HomeState {
                 ),
                 start_time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
                 ticket: "".into(),
+                project: "".into(),
                 description: "Loading...".into(),
                 duration: Default::default(),
                 version: DataVersion::fresh(),
