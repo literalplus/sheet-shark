@@ -50,9 +50,9 @@ impl TimesheetSummary {
                 let project = entry
                     .project_key
                     .as_deref()
-                    .unwrap_or("Unknown")
+                    .unwrap_or("-")
                     .to_string();
-                let ticket = entry.ticket_key.as_deref().unwrap_or("Unknown").to_string();
+                let ticket = entry.ticket_key.as_deref().unwrap_or("-").to_string();
                 (project, ticket)
             })
             .into_iter()
@@ -63,6 +63,7 @@ impl TimesheetSummary {
                     .sum();
                 (key, total_duration)
             })
+            .filter(|(_, total)| !total.is_zero())
             .collect();
 
         Self { ticket_sums }
