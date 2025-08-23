@@ -48,6 +48,7 @@ diesel_migrations = { version = "2.2.0", features = ["sqlite"] }
 type-safe-id = "0.3.3"
 time = { version = "0.3.41", features = ["local-offset", "formatting", "parsing"] }
 educe = "0.6.0"
+itertools = "0.14.0"
 
 
 [build-dependencies]

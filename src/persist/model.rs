@@ -29,6 +29,7 @@ pub enum Event {
         version: DataVersionNumber,
     },
     TimesheetLoaded {
+        day: Date,
         timesheet: Timesheet,
         entries: Vec<TimeEntry>,
     },

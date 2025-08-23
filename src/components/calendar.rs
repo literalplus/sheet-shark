@@ -1,5 +1,9 @@
+use std::collections::HashMap;
+
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
+use educe::Educe;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use ratatui::{
     prelude::*,
@@ -16,30 +20,52 @@ use super::Component;
 use crate::{
     action::{Action, Page, RelevantKey},
     layout::LayoutSlot,
-    persist::{self, Command, Event},
+    persist::{self, Command, Event, TimeEntry},
 };
 
+#[derive(Educe)]
+#[educe(Default)]
 pub struct Calendar {
     action_tx: Option<UnboundedSender<Action>>,
     persist_tx: Option<UnboundedSender<Command>>,
-
     suspended: bool,
+
+    #[educe(Default(expression= OffsetDateTime::now_local()
+            .expect("find local offset for date")
+            .date()))]
     day: Date,
     days_with_timesheets: Vec<Date>,
+    summary: Option<TimesheetSummary>,
 }
 
-impl Default for Calendar {
-    fn default() -> Self {
-        let selected_date = OffsetDateTime::now_local()
-            .expect("find local offset for date")
-            .date();
-        Self {
-            action_tx: Default::default(),
-            persist_tx: Default::default(),
-            suspended: false,
-            day: selected_date,
-            days_with_timesheets: vec![],
-        }
+struct TimesheetSummary {
+    ticket_sums: HashMap<(String, String), Duration>,
+}
+
+impl TimesheetSummary {
+    fn new(entries: Vec<TimeEntry>) -> Self {
+        let ticket_sums = entries
+            .into_iter()
+            .into_group_map_by(|entry| {
+                let project = entry
+                    .project_key
+                    .as_deref()
+                    .unwrap_or("Unknown")
+                    .to_string();
+                let ticket = entry.ticket_key.as_deref().unwrap_or("Unknown").to_string();
+                (project, ticket)
+            })
+            .into_iter()
+            .map(|(key, group)| {
+                let total_duration: Duration = group
+                    .into_iter()
+                    .map(|entry| Duration::minutes(entry.duration_mins as i64))
+                    .sum();
+                (key, total_duration)
+            })
+            .collect();
+
+        Self { ticket_sums }
     }
 }
 
@@ -59,7 +85,7 @@ impl Component for Calendar {
     }
 
     fn init(&mut self, _area: Size) -> Result<()> {
-        self.fetch_timesheets()?;
+        self.fetch_for_new_day()?;
         Ok(())
     }
 
@@ -106,23 +132,65 @@ impl Component for Calendar {
             .padding(Padding::uniform(1));
         frame.render_widget(&detail_block, detail_area);
         let detail_area = detail_block.inner(detail_area);
-        let text = Text::from("sample text");
-        frame.render_widget(text, detail_area);
+
+        match &self.summary {
+            Some(summary) => {
+                let header = Row::new(vec!["Project", "Ticket", "Duration"]);
+                let rows: Vec<Row> = summary
+                    .ticket_sums
+                    .iter()
+                    .map(|((project, ticket), duration)| {
+                        let hours = duration.whole_hours();
+                        let minutes = duration.whole_minutes() % 60;
+                        Row::new(vec![
+                            project.clone(),
+                            ticket.clone(),
+                            format!("{}h {:02}m", hours, minutes),
+                        ])
+                    })
+                    .collect();
+
+                let table = Table::new(
+                    rows,
+                    [
+                        Constraint::Percentage(40),
+                        Constraint::Percentage(40),
+                        Constraint::Percentage(20),
+                    ],
+                )
+                .header(header.style(Style::default().add_modifier(Modifier::BOLD)))
+                .block(Block::default().title("Time Summary"));
+
+                frame.render_widget(table, detail_area);
+            }
+            None => {
+                let text = Text::from("Loading summary...");
+                frame.render_widget(text, detail_area);
+            }
+        }
 
         Ok(())
     }
 
     fn handle_persisted(&mut self, event: persist::Event) -> Result<Option<Action>> {
-        if let Event::TimesheetsOfMonthLoaded { day, timesheets } = event
-            && day == self.day
-        {
-            self.days_with_timesheets = vec![];
-            let format = format_description::parse("[year]-[month]-[day]")?;
-            for timesheet in timesheets {
-                if let Ok(day) = Date::parse(&timesheet.day, &format) {
-                    self.days_with_timesheets.push(day);
+        match event {
+            Event::TimesheetsOfMonthLoaded { day, timesheets } if day == self.day => {
+                self.days_with_timesheets = vec![];
+                let format = format_description::parse("[year]-[month]-[day]")?;
+                for timesheet in timesheets {
+                    if let Ok(day) = Date::parse(&timesheet.day, &format) {
+                        self.days_with_timesheets.push(day);
+                    }
                 }
             }
+            Event::TimesheetLoaded {
+                day,
+                timesheet: _,
+                entries,
+            } if day == self.day => {
+                self.summary = Some(TimesheetSummary::new(entries));
+            }
+            _ => {}
         }
         Ok(None)
     }
@@ -160,15 +228,19 @@ impl Calendar {
         }
         .expect("date math not to overflow");
         self.day = new_day;
-        let _ = self.fetch_timesheets();
+        let _ = self.fetch_for_new_day();
         true
     }
 
-    fn fetch_timesheets(&mut self) -> Result<()> {
+    fn fetch_for_new_day(&mut self) -> Result<()> {
         self.persist_tx
             .as_mut()
             .expect("persist tx")
             .send(Command::LoadTimesheetsOfMonth { day: self.day })?;
+        self.persist_tx
+            .as_mut()
+            .expect("persist tx")
+            .send(Command::LoadTimesheet { day: self.day })?;
         self.days_with_timesheets = vec![];
         Ok(())
     }

@@ -23,7 +23,11 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             }
             HomeAction::None
         }
-        persist::Event::TimesheetLoaded { timesheet, entries } => {
+        persist::Event::TimesheetLoaded {
+            timesheet,
+            entries,
+            day: _,
+        } if !home.suspended => { // prevent creating timesheets when browsing calendar
             let day = timesheet.day.to_string();
             home.state = into_state(timesheet, entries);
             if home.state.items.is_empty() {

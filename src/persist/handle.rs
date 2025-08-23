@@ -4,6 +4,7 @@ use color_eyre::{Result, eyre::Context};
 use diesel::{RunQueryDsl, SqliteConnection, prelude::*};
 
 use time::{Date, format_description};
+use tracing::warn;
 
 use crate::persist::{
     Command, Event, TimeEntry, TimeEntryId, Timesheet,
@@ -43,13 +44,33 @@ async fn delete_entry(conn: &mut SqliteConnection, id: TimeEntryId) -> Result<Ev
 }
 
 async fn load_timesheet(conn: &mut SqliteConnection, day: Date) -> Result<Event> {
-    let timesheet = load_or_create_timesheet(conn, day).await?;
+    let timesheet = load_timesheet_or_dummy(conn, day).await?;
     let entries = TimeEntry::belonging_to(&timesheet)
         .select(TimeEntry::as_select())
         .order_by(time_entry::start_time)
         .load::<TimeEntry>(conn)
         .wrap_err("loading timesheet entries")?;
-    Ok(Event::TimesheetLoaded { timesheet, entries })
+    if entries.is_empty() {
+        warn!("Noticed empty timesheet while loading, cleaning it up: {day}");
+        delete_timesheet(conn, day).await?;
+    } else if entries.len() == 1 && entries[0].start_time == "00:00" && entries[0].duration_mins == 0 {
+        warn!("Cleaning up dummy entry: {day}");
+        delete_entry(conn, TimeEntryId::from_str(&entries[0].id)?).await?;
+    }
+    Ok(Event::TimesheetLoaded {
+        day,
+        timesheet,
+        entries,
+    })
+}
+
+async fn delete_timesheet(conn: &mut SqliteConnection, day: Date) -> Result<()> {
+    let format = format_description::parse("[year]-[month]-[day]")?;
+    let iso_day = day.format(&format)?;
+    diesel::delete(timesheet::table.filter(timesheet::day.eq(iso_day)))
+        .execute(conn)
+        .wrap_err("delete timesheet")?;
+    Ok(())
 }
 
 async fn load_timesheets_of_month(conn: &mut SqliteConnection, day: Date) -> Result<Event> {
@@ -77,7 +98,7 @@ async fn ensure_timesheet_exists(conn: &mut SqliteConnection, day: &str) -> Resu
     Ok(())
 }
 
-async fn load_or_create_timesheet(conn: &mut SqliteConnection, day: Date) -> Result<Timesheet> {
+async fn load_timesheet_or_dummy(conn: &mut SqliteConnection, day: Date) -> Result<Timesheet> {
     let format = format_description::parse("[year]-[month]-[day]")?;
     let iso_day = day.format(&format)?;
     let loaded = timesheet::table
@@ -89,13 +110,9 @@ async fn load_or_create_timesheet(conn: &mut SqliteConnection, day: Date) -> Res
     if let Some(loaded) = loaded {
         return Ok(loaded);
     }
-    let created = Timesheet {
+    let dummy = Timesheet {
         day: day.to_string(),
         status: "OPEN".to_string(),
     };
-    diesel::insert_into(timesheet::table)
-        .values(&created)
-        .execute(conn)
-        .wrap_err_with(|| format!("create timesheet {day} since it didn't exist"))?;
-    Ok(created)
+    Ok(dummy)
 }
