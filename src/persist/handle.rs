@@ -53,7 +53,10 @@ async fn load_timesheet(conn: &mut SqliteConnection, day: Date) -> Result<Event>
     if entries.is_empty() {
         warn!("Noticed empty timesheet while loading, cleaning it up: {day}");
         delete_timesheet(conn, day).await?;
-    } else if entries.len() == 1 && entries[0].start_time == "00:00" && entries[0].duration_mins == 0 {
+    } else if entries.len() == 1
+        && entries[0].start_time == "00:00"
+        && entries[0].duration_mins == 0
+    {
         warn!("Cleaning up dummy entry: {day}");
         delete_entry(conn, TimeEntryId::from_str(&entries[0].id)?).await?;
     }

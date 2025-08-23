@@ -27,7 +27,8 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             timesheet,
             entries,
             day: _,
-        } if !home.suspended => { // prevent creating timesheets when browsing calendar
+        } if !home.suspended => {
+            // prevent creating timesheets when browsing calendar
             let day = timesheet.day.to_string();
             home.state = into_state(timesheet, entries);
             if home.state.items.is_empty() {
