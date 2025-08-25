@@ -1,8 +1,14 @@
+use std::vec;
+
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use educe::Educe;
 use lazy_static::lazy_static;
-use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
+use ratatui::{
+    prelude::*,
+    style::palette::tailwind::{self},
+    widgets::*,
+};
 use time::{Date, OffsetDateTime, format_description};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -16,6 +22,7 @@ use crate::{
     config::Config,
     layout::LayoutSlot,
     persist,
+    widgets::table_popup::TablePopup,
 };
 
 mod action;
@@ -116,24 +123,22 @@ impl Component for Home {
             };
             row.style(Style::new().bg(color))
         });
-        let table = Table::new(
-            rows,
-            [
-                // + 1 is for padding.
-                Constraint::Length(5),
-                Constraint::Length(3),
-                Constraint::Max(20),
-                Constraint::Fill(1),
-                Constraint::Max(10),
-            ],
-        )
-        .header(header)
-        .row_highlight_style(Style::from(Modifier::REVERSED))
-        .cell_highlight_style(
-            Style::from(Modifier::BOLD)
-                .not_reversed()
-                .bg(tailwind::SLATE.c400),
-        );
+        let widths = [
+            // + 1 is for padding.
+            Constraint::Length(5),
+            Constraint::Length(3),
+            Constraint::Max(20),
+            Constraint::Fill(1),
+            Constraint::Max(10),
+        ];
+        let table = Table::new(rows, widths)
+            .header(header)
+            .row_highlight_style(Style::from(Modifier::REVERSED))
+            .cell_highlight_style(
+                Style::from(Modifier::BOLD)
+                    .not_reversed()
+                    .bg(tailwind::SLATE.c400),
+            );
 
         let table = match &self.edit_mode {
             Some(edit_mode) => edit_mode.style_table(table),
@@ -141,6 +146,17 @@ impl Component for Home {
         };
 
         frame.render_stateful_widget(table, area, &mut self.state.table);
+
+        if self.state.table.selected_column() == Some(2) {
+            let items = [
+                ListItem::from(Line::from("EXAMP-89")),
+                ListItem::from(Line::from("IM-6798")),
+            ];
+            let mut list_state = ListState::default();
+            let popup = TablePopup::new(&self.state.table, &mut list_state, &items, widths);
+            frame.render_widget(popup, area);
+        }
+
         Ok(())
     }
 

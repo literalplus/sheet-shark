@@ -47,11 +47,7 @@ impl TimesheetSummary {
         let ticket_sums = entries
             .into_iter()
             .into_group_map_by(|entry| {
-                let project = entry
-                    .project_key
-                    .as_deref()
-                    .unwrap_or("-")
-                    .to_string();
+                let project = entry.project_key.as_deref().unwrap_or("-").to_string();
                 let ticket = entry.ticket_key.as_deref().unwrap_or("-").to_string();
                 (project, ticket)
             })

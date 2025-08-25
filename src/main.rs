@@ -19,6 +19,7 @@ mod logging;
 mod persist;
 mod shared;
 mod tui;
+mod widgets;
 
 fn main() -> Result<()> {
     bootstrap(|| {
