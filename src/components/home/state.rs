@@ -127,6 +127,14 @@ impl TicketsSuggestion {
         self.suggestions = suggestions;
     }
 
+    pub fn selected(&self) -> Option<&str> {
+        if let Some(idx) = self.list_state.selected() {
+            self.suggestions.get(idx).map(|x| x.as_str())
+        } else {
+            None
+        }
+    }
+
     pub fn as_popup<'a, CI>(
         &'a mut self,
         table_state: &'a TableState,

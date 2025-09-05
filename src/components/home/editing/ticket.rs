@@ -28,7 +28,12 @@ impl Ticket {
 impl EditModeBehavior for Ticket {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
         if self.buf.should_save(key) {
-            state.expect_selected_item_mut().ticket = self.buf.to_owned();
+            let ticket = if let Some(suggested) = state.tickets_suggestion.selected() {
+                suggested.to_owned()
+            } else {
+                self.buf.to_owned()
+            };
+            state.expect_selected_item_mut().ticket = ticket;
         }
         let action = self.buf.handle_key_event(state, key);
 
