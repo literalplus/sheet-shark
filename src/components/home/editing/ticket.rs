@@ -30,7 +30,15 @@ impl EditModeBehavior for Ticket {
         if self.buf.should_save(key) {
             state.expect_selected_item_mut().ticket = self.buf.to_owned();
         }
-        self.buf.handle_key_event(state, key)
+        let action = self.buf.handle_key_event(state, key);
+
+        let suggest_query = &mut state.tickets_suggestion.query;
+        if &self.buf != suggest_query && action == HomeAction::None {
+            *suggest_query = self.buf.to_string();
+            HomeAction::SuggestTickets(self.buf.to_string())
+        } else {
+            action
+        }
     }
 
     fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {

@@ -9,7 +9,6 @@ use crate::{
     persist::{self, Event, TimeEntry, Timesheet},
 };
 use chrono::NaiveTime;
-use ratatui::widgets::TableState;
 use tracing::error;
 
 pub fn handle(home: &mut Home, event: Event) -> HomeAction {
@@ -39,6 +38,12 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             }
             HomeAction::SetStatusLine(format!("Loaded: {day}"))
         }
+        persist::Event::TicketsSuggested { query, ticket_keys } if !home.suspended => {
+            home.state
+                .tickets_suggestion
+                .handle_result(query, ticket_keys);
+            HomeAction::None
+        }
         _ => HomeAction::None,
     }
 }
@@ -55,9 +60,8 @@ fn into_state(timesheet: Timesheet, entries: Vec<TimeEntry>) -> HomeState {
         })
         .collect();
     HomeState {
-        table: TableState::default(),
         timesheet: Some(timesheet),
         items,
-        items_to_delete: vec![],
+        ..Default::default()
     }
 }

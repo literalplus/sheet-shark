@@ -22,7 +22,6 @@ use crate::{
     config::Config,
     layout::LayoutSlot,
     persist,
-    widgets::table_popup::TablePopup,
 };
 
 mod action;
@@ -148,12 +147,8 @@ impl Component for Home {
         frame.render_stateful_widget(table, area, &mut self.state.table);
 
         if self.state.table.selected_column() == Some(2) {
-            let items = [
-                ListItem::from(Line::from("EXAMP-89")),
-                ListItem::from(Line::from("IM-6798")),
-            ];
-            let mut list_state = ListState::default();
-            let popup = TablePopup::new(&self.state.table, &mut list_state, &items, widths);
+            let suggestion = &mut self.state.tickets_suggestion;
+            let popup = suggestion.as_popup(&self.state.table, widths);
             frame.render_widget(popup, area);
         }
 

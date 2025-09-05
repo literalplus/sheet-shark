@@ -1,14 +1,28 @@
 use std::str::FromStr;
 
 use color_eyre::{Result, eyre::Context};
-use diesel::{RunQueryDsl, SqliteConnection, prelude::*};
+use diesel::{
+    RunQueryDsl, SqliteConnection,
+    dsl::count,
+    expression::{ValidGrouping, is_aggregate},
+    prelude::*,
+    sql_types::{Nullable, Text},
+};
 
-use time::{Date, format_description};
+use time::{
+    Date, OffsetDateTime,
+    ext::NumericalDuration,
+    format_description::{self, FormatItem},
+    macros::format_description,
+};
 use tracing::warn;
 
 use crate::persist::{
     Command, Event, TimeEntry, TimeEntryId, Timesheet,
-    schema::{time_entry, timesheet},
+    schema::{
+        time_entry::{self},
+        timesheet,
+    },
 };
 
 pub(super) async fn handle(conn: &mut SqliteConnection, cmd: Command) -> Result<Event> {
@@ -17,6 +31,7 @@ pub(super) async fn handle(conn: &mut SqliteConnection, cmd: Command) -> Result<
         Command::DeleteEntry(id) => delete_entry(conn, id).await,
         Command::LoadTimesheet { day } => load_timesheet(conn, day).await,
         Command::LoadTimesheetsOfMonth { day } => load_timesheets_of_month(conn, day).await,
+        Command::SuggestTickets { query } => suggest_tickets(conn, query).await,
     }
 }
 
@@ -102,8 +117,7 @@ async fn ensure_timesheet_exists(conn: &mut SqliteConnection, day: &str) -> Resu
 }
 
 async fn load_timesheet_or_dummy(conn: &mut SqliteConnection, day: Date) -> Result<Timesheet> {
-    let format = format_description::parse("[year]-[month]-[day]")?;
-    let iso_day = day.format(&format)?;
+    let iso_day = day.format(ISO_DAY)?;
     let loaded = timesheet::table
         .filter(timesheet::day.eq(iso_day))
         .select(Timesheet::as_select())
@@ -119,3 +133,39 @@ async fn load_timesheet_or_dummy(conn: &mut SqliteConnection, day: Date) -> Resu
     };
     Ok(dummy)
 }
+
+define_sql_function!(fn lower(x: Nullable<Text>) -> Text);
+impl ValidGrouping<lower_utils::lower<time_entry::ticket_key>> for lower<time_entry::ticket_key> {
+    type IsAggregate = is_aggregate::No;
+}
+
+async fn suggest_tickets(conn: &mut SqliteConnection, query: String) -> Result<Event> {
+    let query = query.to_lowercase();
+    let six_months_ago = OffsetDateTime::now_local()?
+        .date()
+        .saturating_sub((6 * 30).days());
+    let six_months_ago = six_months_ago.format(ISO_DAY)?;
+    let filter = time_entry::timesheet_day
+        .gt(six_months_ago)
+        .and(time_entry::ticket_key.is_not_null());
+
+    let mut select = time_entry::table
+        .filter(filter)
+        .group_by(lower(time_entry::ticket_key))
+        .select(lower(time_entry::ticket_key))
+        .order_by(count(time_entry::ticket_key))
+        .into_boxed();
+
+    if let Some((jira_project, issue_key)) = query.split_once('-') {
+        select = select
+            .filter(lower(time_entry::ticket_key).like(format!("{jira_project}%")))
+            .filter(lower(time_entry::ticket_key).like(format!("%-{issue_key}%")));
+    } else {
+        select = select.filter(lower(time_entry::ticket_key).like(format!("{query}%")));
+    }
+
+    let ticket_keys = select.get_results(conn)?;
+    Ok(Event::TicketsSuggested { ticket_keys, query })
+}
+
+const ISO_DAY: &[FormatItem<'static>] = format_description!("[year]-[month]-[day]");

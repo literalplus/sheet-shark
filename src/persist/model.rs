@@ -18,6 +18,9 @@ pub enum Command {
     LoadTimesheetsOfMonth {
         day: Date,
     },
+    SuggestTickets {
+        query: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -36,6 +39,10 @@ pub enum Event {
     TimesheetsOfMonthLoaded {
         day: Date,
         timesheets: Vec<Timesheet>,
+    },
+    TicketsSuggested {
+        query: String,
+        ticket_keys: Vec<String>,
     },
 }
 

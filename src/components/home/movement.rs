@@ -18,12 +18,18 @@ pub fn is_movement(key: KeyEvent) -> bool {
 pub fn handle_movement(state: &mut HomeState, key: KeyEvent) -> bool {
     match key.code {
         KeyCode::Up => {
-            state.table.select_previous();
+            if state.table.selected() != Some(0) {
+                state.table.select_previous();
+                return false;
+            }
             state.ensure_column_selected();
             true
         }
         KeyCode::Down => {
-            state.table.select_next();
+            if state.table.selected() != Some(state.items.len() - 1) {
+                state.table.select_next();
+                return false;
+            }
             state.ensure_column_selected();
             true
         }

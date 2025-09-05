@@ -4,7 +4,7 @@ use std::time::Duration;
 use crate::{
     action::{Action, Page},
     components::home::{EDITING_KEYS, Home, SELECTING_KEYS, editing::EditMode, state::TimeItem},
-    persist,
+    persist::{self, Command},
 };
 
 #[derive(PartialEq, Eq)]
@@ -19,6 +19,7 @@ pub enum HomeAction {
     SetStatusLine(String),
     SplitItemDown(usize),
     MergeItemDown(usize),
+    SuggestTickets(String),
 }
 
 impl From<ErrReport> for HomeAction {
@@ -58,6 +59,7 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
         }
         HomeAction::ExitEdit => {
             home.edit_mode = None;
+            home.state.tickets_suggestion = Default::default();
             return Ok(Some(Action::SetRelevantKeys(SELECTING_KEYS.to_vec())));
         }
         HomeAction::SetStatusLine(msg) => return Ok(Some(Action::SetStatusLine(msg))),
@@ -99,6 +101,11 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
             return Ok(Some(Action::SetActivePage(Page::Calendar {
                 day: home.day,
             })));
+        }
+        HomeAction::SuggestTickets(query) => {
+            if !query.is_empty() {
+                home.send_persist(Command::SuggestTickets { query });
+            }
         }
         HomeAction::None => {}
     }

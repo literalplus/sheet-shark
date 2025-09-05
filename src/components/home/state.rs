@@ -1,9 +1,15 @@
+use std::ops::Deref;
 use std::time::Duration;
 use std::{ops::Range, str::FromStr};
 
 use chrono::NaiveTime;
 use color_eyre::eyre::Context;
+use educe::Educe;
 use humantime::format_duration;
+use itertools::Itertools;
+use ratatui::layout::Constraint;
+use ratatui::text::Line;
+use ratatui::widgets::{ListItem, ListState};
 use ratatui::{
     text::Text,
     widgets::{Row, TableState},
@@ -11,6 +17,7 @@ use ratatui::{
 
 use crate::persist::{self, TimeEntryId, Timesheet};
 use crate::shared::DataVersion;
+use crate::widgets::table_popup::TablePopup;
 
 pub struct TimeItem {
     pub id: TimeEntryId,
@@ -31,6 +38,18 @@ impl TimeItem {
             ticket: Default::default(),
             project: Default::default(),
             description: Default::default(),
+            version: DataVersion::fresh(),
+        }
+    }
+
+    pub fn loading() -> Self {
+        Self {
+            id: TimeEntryId::from_uuid("791d98c7-3be0-455f-8bfb-94769131243c".try_into().unwrap()),
+            start_time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+            ticket: "".into(),
+            project: "".into(),
+            description: "Loading...".into(),
+            duration: Default::default(),
             version: DataVersion::fresh(),
         }
     }
@@ -93,32 +112,48 @@ impl TimeItem {
     }
 }
 
+#[derive(Default)]
+pub struct TicketsSuggestion {
+    pub query: String,
+    suggestions: Vec<String>,
+    pub list_state: ListState,
+}
+
+impl TicketsSuggestion {
+    pub fn handle_result(&mut self, query: String, suggestions: Vec<String>) {
+        if query != self.query {
+            return; // outdated result, new query in flight
+        }
+        self.suggestions = suggestions;
+    }
+
+    pub fn as_popup<'a, CI>(
+        &'a mut self,
+        table_state: &'a TableState,
+        constraints: CI,
+    ) -> TablePopup<'a>
+    where
+        CI: IntoIterator<Item = Constraint>,
+    {
+        let items = self
+            .suggestions
+            .iter()
+            .map(|it| ListItem::from(Line::from(it.deref())))
+            .collect_vec();
+        let state = &mut self.list_state;
+        TablePopup::new(table_state, state, items, constraints)
+    }
+}
+
+#[derive(Educe)]
+#[educe(Default)]
 pub struct HomeState {
     pub table: TableState,
     pub timesheet: Option<Timesheet>,
+    #[educe(Default(expression = vec![TimeItem::loading()]))]
     pub items: Vec<TimeItem>,
     pub items_to_delete: Vec<TimeItem>,
-}
-
-impl Default for HomeState {
-    fn default() -> Self {
-        Self {
-            table: TableState::default(),
-            timesheet: None,
-            items: vec![TimeItem {
-                id: TimeEntryId::from_uuid(
-                    "791d98c7-3be0-455f-8bfb-94769131243c".try_into().unwrap(),
-                ),
-                start_time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
-                ticket: "".into(),
-                project: "".into(),
-                description: "Loading...".into(),
-                duration: Default::default(),
-                version: DataVersion::fresh(),
-            }],
-            items_to_delete: vec![],
-        }
-    }
+    pub tickets_suggestion: TicketsSuggestion,
 }
 
 impl HomeState {

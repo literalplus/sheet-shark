@@ -37,11 +37,23 @@ impl AsRef<str> for BufEditBehavior {
     }
 }
 
+impl AsRef<String> for BufEditBehavior {
+    fn as_ref(&self) -> &String {
+        &self.buf
+    }
+}
+
 impl Deref for BufEditBehavior {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
         &self.buf
+    }
+}
+
+impl PartialEq<String> for BufEditBehavior {
+    fn eq(&self, other: &String) -> bool {
+        self.buf.eq(other)
     }
 }
 

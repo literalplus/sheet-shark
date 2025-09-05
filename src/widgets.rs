@@ -22,7 +22,7 @@ pub mod table_popup {
         pub fn new<CI>(
             table_state: &'a TableState,
             list_state: &'a mut ListState,
-            items: &'a [ListItem<'a>],
+            items: Vec<ListItem<'a>>,
             constraints: CI,
         ) -> Self
         where
@@ -31,7 +31,7 @@ pub mod table_popup {
             Self {
                 table_state,
                 list_state,
-                items: items.into(),
+                items,
                 constraints: constraints.into_iter().collect_vec(),
             }
         }
@@ -66,6 +66,9 @@ pub mod table_popup {
         where
             Self: Sized,
         {
+            if self.items.is_empty() {
+                return;
+            }
             let Some(area) = self.find_best_area(&self.constraints, area) else {
                 return;
             };
