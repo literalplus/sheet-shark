@@ -34,6 +34,7 @@ impl EditModeBehavior for Ticket {
                 self.buf.to_owned()
             };
             state.expect_selected_item_mut().ticket = ticket;
+            state.tickets_suggestion.reset();
         }
         let action = self.buf.handle_key_event(state, key);
 

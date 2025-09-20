@@ -120,6 +120,14 @@ pub struct TicketsSuggestion {
 }
 
 impl TicketsSuggestion {
+    pub fn reset(&mut self) {
+        self.query = Default::default();
+    }
+
+    pub fn is_active(&self) -> bool {
+        !self.query.is_empty()
+    }
+
     pub fn handle_result(&mut self, query: String, suggestions: Vec<String>) {
         if query != self.query {
             return; // outdated result, new query in flight

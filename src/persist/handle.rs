@@ -12,7 +12,7 @@ use diesel::{
 use time::{
     Date, OffsetDateTime,
     ext::NumericalDuration,
-    format_description::{self, FormatItem},
+    format_description::FormatItem,
     macros::format_description,
 };
 use tracing::warn;
@@ -83,8 +83,7 @@ async fn load_timesheet(conn: &mut SqliteConnection, day: Date) -> Result<Event>
 }
 
 async fn delete_timesheet(conn: &mut SqliteConnection, day: Date) -> Result<()> {
-    let format = format_description::parse("[year]-[month]-[day]")?;
-    let iso_day = day.format(&format)?;
+    let iso_day = day.format(ISO_DAY)?;
     diesel::delete(timesheet::table.filter(timesheet::day.eq(iso_day)))
         .execute(conn)
         .wrap_err("delete timesheet")?;
@@ -92,8 +91,7 @@ async fn delete_timesheet(conn: &mut SqliteConnection, day: Date) -> Result<()> 
 }
 
 async fn load_timesheets_of_month(conn: &mut SqliteConnection, day: Date) -> Result<Event> {
-    let format = format_description::parse("[year]-[month]-%")?;
-    let month_like = day.format(&format)?;
+    let month_like = day.format(ISO_MONTH_WILDCARD)?;
     let timesheets = timesheet::table
         .filter(timesheet::day.like(&month_like))
         .select(Timesheet::as_select())
@@ -169,3 +167,4 @@ async fn suggest_tickets(conn: &mut SqliteConnection, query: String) -> Result<E
 }
 
 const ISO_DAY: &[FormatItem<'static>] = format_description!("[year]-[month]-[day]");
+const ISO_MONTH_WILDCARD: &[FormatItem<'static>] = format_description!("[year]-[month]-%");
