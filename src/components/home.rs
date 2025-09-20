@@ -57,6 +57,14 @@ impl Home {
             .send(command)
             .expect("able to send persist msg")
     }
+
+    fn send_action(&mut self, action: Action) {
+        self.action_tx
+            .as_ref()
+            .expect("action_tx initialised")
+            .send(action)
+            .expect("able to send action msg")
+    }
 }
 
 impl Component for Home {
@@ -81,12 +89,14 @@ impl Component for Home {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         let action = key_handling::handle(self, key);
-        action::perform(self, action)
+        action::perform(self, action)?;
+        Ok(None)
     }
 
     fn handle_persisted(&mut self, event: persist::Event) -> Result<Option<Action>> {
         let action = persist_handling::handle(self, event);
-        action::perform(self, action)
+        action::perform(self, action)?;
+        Ok(None)
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {

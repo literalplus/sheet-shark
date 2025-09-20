@@ -38,9 +38,9 @@ impl EditModeBehavior for Ticket {
         let action = self.buf.handle_key_event(state, key);
 
         let suggest_query = &mut state.tickets_suggestion.query;
-        if &self.buf != suggest_query && action == HomeAction::None {
+        if &self.buf != suggest_query {
             *suggest_query = self.buf.to_string();
-            HomeAction::SuggestTickets(self.buf.to_string())
+            HomeAction::Many(vec![action, HomeAction::SuggestTickets(self.buf.to_string())])
         } else {
             action
         }

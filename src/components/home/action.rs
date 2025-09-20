@@ -10,6 +10,7 @@ use crate::{
 #[derive(PartialEq, Eq)]
 pub enum HomeAction {
     None,
+    Many(Vec<HomeAction>),
 
     EnterEditSpecific(Option<EditMode>),
     EnterSelect,
@@ -28,42 +29,47 @@ impl From<ErrReport> for HomeAction {
     }
 }
 
-pub fn perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
-    let result = match do_perform(home, action) {
-        result @ Ok(Some(Action::SetStatusLine(_))) => {
+pub fn perform(home: &mut Home, action: HomeAction) -> Result<()> {
+    if home.need_status_line_reset {
+        home.need_status_line_reset = false;
+        home.send_action(Action::SetStatusLine("".into()));
+    }
+    let actions = do_perform(home, action)?;
+    for action in actions {
+        if matches!(action, Action::SetStatusLine(_)) {
             home.need_status_line_reset = true;
-            result
         }
-        Ok(None) if home.need_status_line_reset => {
-            home.need_status_line_reset = false;
-            Ok(Some(Action::SetStatusLine("".into())))
-        }
-        result => result,
-    };
+        home.send_action(action);
+    }
     save_any_dirty_state(home);
-    result
+    Ok(())
 }
 
-fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
-    match action {
+fn do_perform(home: &mut Home, action: HomeAction) -> Result<Vec<Action>> {
+    let out_action = match action {
+        HomeAction::Many(actions) => {
+            let mut results = vec![];
+            for action in actions {
+                for result in do_perform(home, action)? {
+                    results.push(result);
+                }
+            }
+            return Ok(results);
+        }
         HomeAction::EnterEditSpecific(Some(mode)) => {
             home.state.table.select_column(Some(mode.get_column_num()));
             home.edit_mode = Some(mode);
-            return Ok(Some(Action::SetRelevantKeys(EDITING_KEYS.to_vec())));
+            Action::SetRelevantKeys(EDITING_KEYS.to_vec())
         }
-        HomeAction::EnterEditSpecific(None) => {
-            return Ok(Some(Action::SetStatusLine("⛔⛔⛔".into())));
-        }
-        HomeAction::EnterSelect => {
-            return Ok(Some(Action::SetRelevantKeys(SELECTING_KEYS.to_vec())));
-        }
+        HomeAction::EnterEditSpecific(None) => Action::SetStatusLine("⛔⛔⛔".into()),
+        HomeAction::EnterSelect => Action::SetRelevantKeys(SELECTING_KEYS.to_vec()),
         HomeAction::ExitEdit => {
             home.edit_mode = None;
             home.state.tickets_suggestion = Default::default();
-            return Ok(Some(Action::SetRelevantKeys(SELECTING_KEYS.to_vec())));
+            Action::SetRelevantKeys(SELECTING_KEYS.to_vec())
         }
-        HomeAction::SetStatusLine(msg) => return Ok(Some(Action::SetStatusLine(msg))),
-        HomeAction::SplitItemDown(idx) => {
+        HomeAction::SetStatusLine(msg) => Action::SetStatusLine(msg),
+        HomeAction::SplitItemDown(idx) => 'block: {
             let original_item = home
                 .state
                 .items
@@ -72,7 +78,7 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
             original_item.version.touch();
             let duration_mins = original_item.duration.as_secs().div_ceil(60);
             if duration_mins <= 1 {
-                return Ok(Some(Action::SetStatusLine("cannot split further!".into())));
+                break 'block Action::SetStatusLine("cannot split further!".into());
             }
             let (first_duration, second_duration) = split_in_half(duration_mins);
             original_item.duration = Duration::from_secs(first_duration * 60);
@@ -82,34 +88,33 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Option<Action>> {
             );
             original_item.start_time += new_item.duration;
             home.state.items.insert(idx, new_item);
+            return Ok(vec![]);
         }
-        HomeAction::MergeItemDown(idx) => {
+        HomeAction::MergeItemDown(idx) => 'block: {
             let items = &mut home.state.items;
             let obsolete_item = items.drain((idx + 1)..(idx + 2)).next();
             let obsolete_item = if let Some(it) = obsolete_item {
                 it
             } else {
-                return Ok(Some(Action::SetStatusLine("no item to merge with".into())));
+                break 'block Action::SetStatusLine("no item to merge with".into());
             };
             let remaining_item = items.get_mut(idx).expect("item to split to exist");
             remaining_item.version.touch();
             remaining_item.duration += obsolete_item.duration;
             remaining_item.description += &format!(" / {}", obsolete_item.description);
             home.state.items_to_delete.push(obsolete_item);
+            return Ok(vec![]);
         }
-        HomeAction::ExitToCalendar => {
-            return Ok(Some(Action::SetActivePage(Page::Calendar {
-                day: home.day,
-            })));
-        }
+        HomeAction::ExitToCalendar => Action::SetActivePage(Page::Calendar { day: home.day }),
         HomeAction::SuggestTickets(query) => {
             if !query.is_empty() {
                 home.send_persist(Command::SuggestTickets { query });
             }
+            return Ok(vec![]);
         }
-        HomeAction::None => {}
-    }
-    Ok(None)
+        HomeAction::None => return Ok(vec![]),
+    };
+    Ok(vec![out_action])
 }
 
 fn save_any_dirty_state(home: &mut Home) {
