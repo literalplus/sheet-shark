@@ -10,9 +10,7 @@ use diesel::{
 };
 
 use time::{
-    Date, OffsetDateTime,
-    ext::NumericalDuration,
-    format_description::FormatItem,
+    Date, OffsetDateTime, ext::NumericalDuration, format_description::FormatItem,
     macros::format_description,
 };
 use tracing::warn;

@@ -20,7 +20,7 @@ impl Description {
     pub fn new(state: &HomeState) -> Self {
         let item = state.expect_selected_item();
         Self {
-            buf: BufEditBehavior::new(item.description.to_owned()),
+            buf: item.description.to_owned().into(),
         }
     }
 }

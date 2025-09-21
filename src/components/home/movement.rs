@@ -33,16 +33,8 @@ pub fn handle_movement(state: &mut HomeState, key: KeyEvent) -> bool {
             state.ensure_column_selected();
             true
         }
-        KeyCode::Left => select_previous_column(state),
-        KeyCode::Right => select_next_column(state),
-        KeyCode::Tab => {
-            state.tickets_suggestion.list_state.select_next();
-            false
-        }
-        KeyCode::BackTab => {
-            state.tickets_suggestion.list_state.select_previous();
-            false
-        }
+        KeyCode::Left | KeyCode::BackTab => select_previous_column(state),
+        KeyCode::Right | KeyCode::Tab => select_next_column(state),
         _ => false,
     }
 }

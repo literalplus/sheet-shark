@@ -20,12 +20,13 @@ use crate::{
 };
 
 mod action;
+mod draw;
 mod editing;
 mod key_handling;
 mod movement;
 mod persist_handling;
 mod state;
-mod draw;
+mod item {}
 
 #[derive(Educe)]
 #[educe(Default)]

@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{
     components::home::{
-        Home,
+        EditModeBehavior, Home,
         action::HomeAction,
         state::{HomeState, TimeItem},
     },
@@ -38,10 +38,10 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             }
             HomeAction::SetStatusLine(format!("Loaded: {day}"))
         }
-        persist::Event::TicketsSuggested { query, ticket_keys } if !home.suspended => {
-            home.state
-                .tickets_suggestion
-                .handle_result(query, ticket_keys);
+        event if !home.suspended => {
+            if let Some(edit_mode) = &mut home.edit_mode {
+                edit_mode.handle_persisted(event);
+            }
             HomeAction::None
         }
         _ => HomeAction::None,

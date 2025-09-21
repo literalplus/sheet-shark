@@ -2,13 +2,20 @@ use std::ops::Deref;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use enum_dispatch::enum_dispatch;
-use ratatui::widgets::{Row, Table};
+use ratatui::{
+    layout::Constraint,
+    widgets::{Row, Table, TableState},
+};
 
-use crate::components::home::{
-    action::HomeAction,
-    editing::EditMode,
-    movement::{handle_movement, is_movement},
-    state::{HomeState, TimeItem},
+use crate::{
+    components::home::{
+        action::HomeAction,
+        editing::EditMode,
+        movement::{handle_movement, is_movement},
+        state::{HomeState, TimeItem},
+    },
+    persist,
+    widgets::table_popup::TablePopup,
 };
 
 #[enum_dispatch]
@@ -18,11 +25,28 @@ pub trait EditModeBehavior {
     fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
         item.as_row()
     }
+    fn draw_popup<'a, CI>(
+        &'a mut self,
+        _table_state: &'a TableState,
+        _constraints: CI,
+    ) -> Option<TablePopup<'a>>
+    where
+        CI: IntoIterator<Item = Constraint>,
+    {
+        None
+    }
+    fn handle_persisted(&mut self, _event: persist::Event) {}
 }
 
 #[derive(Default)]
 pub struct BufEditBehavior {
     buf: String,
+}
+
+impl From<String> for BufEditBehavior {
+    fn from(value: String) -> Self {
+        Self { buf: value }
+    }
 }
 
 impl<'a> From<&'a BufEditBehavior> for &'a str {
@@ -58,12 +82,6 @@ impl PartialEq<String> for BufEditBehavior {
 }
 
 impl BufEditBehavior {
-    pub fn new<T: ToString>(buf: T) -> Self {
-        Self {
-            buf: buf.to_string(),
-        }
-    }
-
     pub fn push(&mut self, chr: char) {
         self.buf.push(chr);
     }

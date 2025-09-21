@@ -25,7 +25,7 @@ impl Time {
     pub fn new(state: &HomeState) -> Self {
         let item = state.expect_selected_item();
         Self {
-            buf: BufEditBehavior::new(item.start_time.format("%H%M")),
+            buf: item.start_time.format("%H%M").to_string().into(),
         }
     }
 

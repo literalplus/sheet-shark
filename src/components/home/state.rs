@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use std::time::Duration;
 use std::{ops::Range, str::FromStr};
 
@@ -6,10 +5,6 @@ use chrono::NaiveTime;
 use color_eyre::eyre::Context;
 use educe::Educe;
 use humantime::format_duration;
-use itertools::Itertools;
-use ratatui::layout::Constraint;
-use ratatui::text::Line;
-use ratatui::widgets::{ListItem, ListState};
 use ratatui::{
     text::Text,
     widgets::{Row, TableState},
@@ -17,7 +12,6 @@ use ratatui::{
 
 use crate::persist::{self, TimeEntryId, Timesheet};
 use crate::shared::DataVersion;
-use crate::widgets::table_popup::TablePopup;
 
 pub struct TimeItem {
     pub id: TimeEntryId,
@@ -112,55 +106,6 @@ impl TimeItem {
     }
 }
 
-#[derive(Default)]
-pub struct TicketsSuggestion {
-    pub query: String,
-    suggestions: Vec<String>,
-    pub list_state: ListState,
-}
-
-impl TicketsSuggestion {
-    pub fn reset(&mut self) {
-        self.query = Default::default();
-    }
-
-    pub fn is_active(&self) -> bool {
-        !self.query.is_empty()
-    }
-
-    pub fn handle_result(&mut self, query: String, suggestions: Vec<String>) {
-        if query != self.query {
-            return; // outdated result, new query in flight
-        }
-        self.suggestions = suggestions;
-    }
-
-    pub fn selected(&self) -> Option<&str> {
-        if let Some(idx) = self.list_state.selected() {
-            self.suggestions.get(idx).map(|x| x.as_str())
-        } else {
-            None
-        }
-    }
-
-    pub fn as_popup<'a, CI>(
-        &'a mut self,
-        table_state: &'a TableState,
-        constraints: CI,
-    ) -> TablePopup<'a>
-    where
-        CI: IntoIterator<Item = Constraint>,
-    {
-        let items = self
-            .suggestions
-            .iter()
-            .map(|it| ListItem::from(Line::from(it.deref())))
-            .collect_vec();
-        let state = &mut self.list_state;
-        TablePopup::new(table_state, state, items, constraints)
-    }
-}
-
 #[derive(Educe)]
 #[educe(Default)]
 pub struct HomeState {
@@ -169,7 +114,6 @@ pub struct HomeState {
     #[educe(Default(expression = vec![TimeItem::loading()]))]
     pub items: Vec<TimeItem>,
     pub items_to_delete: Vec<TimeItem>,
-    pub tickets_suggestion: TicketsSuggestion,
 }
 
 impl HomeState {

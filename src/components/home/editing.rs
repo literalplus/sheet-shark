@@ -1,12 +1,15 @@
 use crossterm::event::KeyEvent;
 use enum_dispatch::enum_dispatch;
-use ratatui::widgets::{Row, Table};
+use ratatui::prelude::Constraint;
+use ratatui::widgets::{Row, Table, TableState};
 
 use crate::components::home::{
     action::HomeAction,
     editing::project::Project,
     state::{HomeState, TimeItem},
 };
+use crate::persist;
+use crate::widgets::table_popup::TablePopup;
 
 mod shared;
 pub(super) use shared::EditModeBehavior;

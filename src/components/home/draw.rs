@@ -23,10 +23,9 @@ pub(super) fn draw(home: &mut Home, frame: &mut Frame, area: Rect) -> Result<()>
     let table = draw_table(&state.items, selected_idx, &home.edit_mode);
     frame.render_stateful_widget(table, area, &mut state.table);
 
-    let ticket = Some(2);
-    let suggestion = &mut state.tickets_suggestion;
-    if state.table.selected_column() == ticket && suggestion.is_active() {
-        let popup = suggestion.as_popup(&state.table, TABLE_WIDTHS);
+    if let Some(edit_mode) = &mut home.edit_mode
+        && let Some(popup) = edit_mode.draw_popup(&state.table, TABLE_WIDTHS)
+    {
         frame.render_widget(popup, area);
     }
 

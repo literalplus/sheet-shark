@@ -1,5 +1,5 @@
 use color_eyre::eyre::{ErrReport, Result};
-use std::time::Duration;
+use std::{ops::Add, time::Duration};
 
 use crate::{
     action::{Action, Page},
@@ -26,6 +26,21 @@ pub enum HomeAction {
 impl From<ErrReport> for HomeAction {
     fn from(value: ErrReport) -> Self {
         Self::SetStatusLine(format!("{value}"))
+    }
+}
+
+impl Add for HomeAction {
+    type Output = HomeAction;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match self {
+            HomeAction::Many(mut actions) => {
+                actions.push(rhs);
+                HomeAction::Many(actions)
+            }
+            HomeAction::None => rhs,
+            exactly_one => HomeAction::Many(vec![exactly_one, rhs]),
+        }
     }
 }
 
@@ -65,7 +80,6 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Vec<Action>> {
         HomeAction::EnterSelect => Action::SetRelevantKeys(SELECTING_KEYS.to_vec()),
         HomeAction::ExitEdit => {
             home.edit_mode = None;
-            home.state.tickets_suggestion = Default::default();
             Action::SetRelevantKeys(SELECTING_KEYS.to_vec())
         }
         HomeAction::SetStatusLine(msg) => Action::SetStatusLine(msg),

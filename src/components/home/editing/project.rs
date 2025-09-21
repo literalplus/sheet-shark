@@ -20,7 +20,7 @@ impl Project {
     pub fn new(state: &HomeState) -> Self {
         let item = state.expect_selected_item();
         Self {
-            buf: BufEditBehavior::new(item.project.to_owned()),
+            buf: item.project.to_owned().into(),
         }
     }
 }
