@@ -5,16 +5,9 @@ use copypasta::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{KeyCode, KeyEvent};
 use educe::Educe;
 use lazy_static::lazy_static;
-use ratatui::{
-    prelude::*,
-    style::palette::tailwind,
-    widgets::{
-        calendar::{CalendarEventStore, Monthly},
-        *,
-    },
-};
+use ratatui::prelude::*;
 use serde::Serialize;
-use time::{Date, Duration, OffsetDateTime, Weekday, ext::NumericalDuration, format_description};
+use time::{Date, Duration, OffsetDateTime, format_description};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
@@ -24,6 +17,9 @@ use crate::{
     layout::LayoutSlot,
     persist::{self, Command, Event, TimeEntry},
 };
+
+mod widgets;
+use widgets::TimesheetCalendar;
 
 #[derive(Educe)]
 #[educe(Default)]
@@ -41,14 +37,14 @@ pub struct Calendar {
 }
 
 #[derive(Serialize)]
-struct ProjectSummary {
-    internal_name: Option<String>,
-    ticket_sums: HashMap<String, Duration>,
+pub struct ProjectSummary {
+    pub internal_name: Option<String>,
+    pub ticket_sums: HashMap<String, Duration>,
 }
 
 #[derive(Serialize)]
-struct TimesheetSummary {
-    projects: HashMap<String, ProjectSummary>,
+pub struct TimesheetSummary {
+    pub projects: HashMap<String, ProjectSummary>,
 }
 
 impl TimesheetSummary {
@@ -131,112 +127,9 @@ impl Component for Calendar {
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
         let area = crate::layout::main_vert(LayoutSlot::MainCanvas, area);
 
-        let start = self.day;
-        let block = Block::new()
-            .borders(!Borders::BOTTOM)
-            .border_type(BorderType::Rounded)
-            .title(format!("📅 {} - Select timesheet", start.year()));
-        frame.render_widget(&block, area);
-        let area = block.inner(area);
-
-        let header_style = Style::default()
-            .add_modifier(Modifier::BOLD)
-            .fg(Color::Green);
-
-        let default_style = Style::default().bg(Color::Rgb(50, 50, 50));
-
-        let events = self.make_dates();
-        let cal = Monthly::new(
-            Date::from_calendar_date(start.year(), start.month(), 1).unwrap(),
-            &events,
-        )
-        .show_month_header(header_style)
-        .default_style(default_style);
-
-        let calendar_width = 3 * 7;
-        let layout = Layout::horizontal([Constraint::Max(calendar_width + 1), Constraint::Fill(1)]);
-        let [calendar_area, detail_area] = (*layout.split(area)).try_into().unwrap();
-        frame.render_widget(cal, calendar_area);
-
-        let detail_block = Block::new()
-            .borders(Borders::LEFT)
-            .padding(Padding::horizontal(1));
-        frame.render_widget(&detail_block, detail_area);
-        let detail_area = detail_block.inner(detail_area);
-
-        match &self.summary {
-            Some(summary) => {
-                let header = Row::new(vec!["Project", "Ticket", "Duration"])
-                    .style(Style::new().bg(tailwind::LIME.c500));
-                let data_rows: Vec<_> = summary
-                    .projects
-                    .iter()
-                    .flat_map(|(project_key, project_summary)| {
-                        project_summary
-                            .ticket_sums
-                            .iter()
-                            .map(move |(ticket, duration)| {
-                                let hours = duration.whole_hours();
-                                let minutes = duration.whole_minutes() % 60;
-                                let display_name =
-                                    project_summary.internal_name.as_deref().unwrap_or("❔");
-                                Row::new(vec![
-                                    format!("{} ({})", display_name, project_key),
-                                    ticket.clone(),
-                                    format!("{}h {:02}m", hours, minutes),
-                                ])
-                            })
-                    })
-                    .collect();
-
-                let rows: Vec<Row> = data_rows.into_iter().collect();
-
-                // Calculate total duration excluding "Pause" projects
-                let total_duration: Duration = summary
-                    .projects
-                    .iter()
-                    .filter(|(_, project_summary)| {
-                        project_summary.internal_name.as_deref() != Some("Pause")
-                    })
-                    .flat_map(|(_, project_summary)| project_summary.ticket_sums.values())
-                    .sum();
-
-                let total_hours = total_duration.whole_hours();
-                let total_minutes = total_duration.whole_minutes() % 60;
-
-                // Table constraints for layout calculation
-                let constraints = [
-                    Constraint::Percentage(40),
-                    Constraint::Percentage(40),
-                    Constraint::Percentage(20),
-                ];
-
-                let table = Table::new(rows, constraints).header(header);
-
-                // Split area for table and total
-                let layout = Layout::vertical([
-                    Constraint::Fill(1),
-                    Constraint::Length(1), // Space for total line
-                ]);
-                let areas = layout.split(detail_area);
-                let table_area = areas[0];
-                let total_area = areas[1];
-
-                frame.render_widget(table, table_area);
-
-                // Right-aligned total at the bottom
-                let total_text = Paragraph::new(format!(
-                    "Working time: {total_hours}h {total_minutes:02}m"
-                ))
-                .style(Style::new().italic())
-                .alignment(Alignment::Right);
-                frame.render_widget(total_text, total_area);
-            }
-            None => {
-                let text = Text::from("Loading summary...");
-                frame.render_widget(text, detail_area);
-            }
-        }
+        let calendar_widget =
+            TimesheetCalendar::new(self.day, &self.days_with_timesheets, self.summary.as_ref());
+        frame.render_widget(calendar_widget, area);
 
         Ok(())
     }
@@ -312,45 +205,6 @@ impl Calendar {
             .send(Command::LoadTimesheet { day: self.day })?;
         self.days_with_timesheets = vec![];
         Ok(())
-    }
-
-    fn make_dates(&self) -> CalendarEventStore {
-        let mut events = CalendarEventStore::default();
-        let today = OffsetDateTime::now_local().expect("today").date();
-
-        let first_of_month = today.replace_day(1).expect("first of month");
-        let mut current_day = first_of_month;
-        while current_day.month() == today.month() {
-            if matches!(current_day.weekday(), Weekday::Sunday | Weekday::Saturday) {
-                events.add(current_day, Style::default().dim());
-            }
-            current_day = current_day
-                .checked_add(1.days())
-                .expect("not to exceed date range");
-        }
-
-        for day_with_timesheet in self.days_with_timesheets.iter() {
-            events.add(
-                *day_with_timesheet,
-                Style::default().fg(tailwind::CYAN.c500),
-            );
-        }
-
-        events.add(
-            today,
-            Style::default()
-                .add_modifier(Modifier::BOLD)
-                .bg(Color::Blue),
-        );
-
-        events.add(
-            self.day,
-            Style::default()
-                .add_modifier(Modifier::UNDERLINED)
-                .bg(Color::Gray),
-        );
-
-        events
     }
 }
 
