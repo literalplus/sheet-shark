@@ -10,6 +10,7 @@ use ratatui::{
     widgets::{Row, TableState},
 };
 
+use crate::config::Config;
 use crate::persist::{self, TimeEntryId, Timesheet};
 use crate::shared::DataVersion;
 
@@ -50,12 +51,17 @@ impl TimeItem {
 
     pub fn to_persist(&self, day: &str) -> persist::TimeEntry {
         let duration_mins = self.duration.as_secs().div_ceil(60) as i32;
+        let project_key = if self.project.is_empty() {
+            Config::get().default_project_key.clone()
+        } else {
+            self.project.clone()
+        };
         persist::TimeEntry {
             id: self.id.to_string(),
             timesheet_day: day.to_string(),
             duration_mins,
             ticket_key: Some(self.ticket.to_string()).filter(|it| !it.is_empty()),
-            project_key: Some(self.project.to_string()).filter(|it| !it.is_empty()),
+            project_key,
             description: self.description.to_string(),
             start_time: self.start_time.format("%H:%M").to_string(),
         }
@@ -66,11 +72,16 @@ impl TryFrom<&persist::TimeEntry> for TimeItem {
     type Error = color_eyre::Report;
 
     fn try_from(value: &persist::TimeEntry) -> Result<Self, Self::Error> {
+        let project = if value.project_key == Config::get().default_project_key {
+            "".to_owned()
+        } else {
+            value.project_key.clone()
+        };
         Ok(Self {
             id: TimeEntryId::from_str(&value.id).wrap_err("TimeEntryId")?,
             start_time: NaiveTime::from_str(&value.start_time).wrap_err("start_time")?,
             ticket: value.ticket_key.clone().unwrap_or_default(),
-            project: value.project_key.clone().unwrap_or_default(),
+            project,
             description: value.description.to_string(),
             duration: Duration::from_secs(value.duration_mins as u64 * 60),
             version: DataVersion::loaded(),

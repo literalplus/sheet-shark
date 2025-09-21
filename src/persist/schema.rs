@@ -7,7 +7,7 @@ diesel::table! {
         start_time -> Text,
         duration_mins -> Integer,
         description -> Text,
-        project_key -> Nullable<Text>,
+        project_key -> Text,
         ticket_key -> Nullable<Text>,
     }
 }

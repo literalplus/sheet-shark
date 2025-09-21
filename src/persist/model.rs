@@ -1,6 +1,7 @@
-use crate::shared::DataVersionNumber;
+use crate::{persist::schema::time_entry::ticket_key, shared::DataVersionNumber};
 
 use super::schema::*;
+use chrono::NaiveTime;
 use diesel::prelude::*;
 use time::Date;
 use type_safe_id::{StaticType, TypeSafeId};
@@ -64,12 +65,21 @@ pub struct TimeEntry {
     pub id: String,
     pub timesheet_day: String,
 
-    pub project_key: Option<String>,
+    pub project_key: String,
     pub ticket_key: Option<String>,
 
     pub duration_mins: i32,
     pub description: String,
     pub start_time: String,
+}
+
+impl TimeEntry {
+    pub fn is_empty_default(&self) -> bool {
+        self.ticket_key.is_none()
+            && self.duration_mins == 0
+            && self.description.is_empty()
+            && self.start_time == "00:00"
+    }
 }
 
 #[derive(Default, Clone, PartialEq, Eq)]

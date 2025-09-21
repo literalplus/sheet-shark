@@ -12,7 +12,7 @@ CREATE TABLE time_entry (
     duration_mins int not null,
     description text not null,
 
-    project_key text null,
+    project_key text not null,
     ticket_key text null,
 
     foreign key(timesheet_day) references timesheet(day)

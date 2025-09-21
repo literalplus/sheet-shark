@@ -13,7 +13,7 @@ use tracing::error;
 
 pub fn handle(home: &mut Home, event: Event) -> HomeAction {
     match event {
-        persist::Event::EntryStored { id, version } => {
+        persist::Event::EntryStored { id, version } if version != -1 => {
             for entry in home.state.items.iter_mut() {
                 if entry.id == id {
                     entry.version.notify_saved(version);

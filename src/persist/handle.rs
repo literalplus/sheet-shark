@@ -34,6 +34,12 @@ pub(super) async fn handle(conn: &mut SqliteConnection, cmd: Command) -> Result<
 }
 
 async fn store_entry(conn: &mut SqliteConnection, entry: TimeEntry, version: i32) -> Result<Event> {
+    if entry.is_empty_default() {
+        return Ok(Event::EntryStored {
+            id: TimeEntryId::from_str(&entry.id)?,
+            version: -1,
+        });
+    }
     ensure_timesheet_exists(conn, &entry.timesheet_day).await?;
 
     diesel::insert_into(time_entry::table)

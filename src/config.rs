@@ -1,6 +1,6 @@
 #![allow(dead_code)] // Remove this once you start using the code
 
-use std::{env, path::PathBuf};
+use std::{collections::HashMap, env, path::PathBuf, sync::OnceLock};
 
 use color_eyre::Result;
 use config::{Environment, File};
@@ -8,7 +8,7 @@ use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
-const CONFIG: &str = include_str!("../.config/config.json5");
+const DEFAULT_CONFIG: &str = include_str!("../.config/config.json5");
 
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct AppConfig {
@@ -18,10 +18,19 @@ pub struct AppConfig {
     pub config_dir: PathBuf,
 }
 
+#[derive(Clone, Debug, Deserialize, Default)]
+pub struct ProjectConfig {
+    pub internal_name: String,
+    pub jira_url: Option<String>,
+}
+
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct Config {
     #[serde(default, flatten)]
     pub config: AppConfig,
+    #[serde(default)]
+    pub projects: HashMap<String, ProjectConfig>,
+    pub default_project_key: String,
 }
 
 lazy_static! {
@@ -36,6 +45,8 @@ lazy_static! {
             .map(PathBuf::from);
 }
 
+static CONFIG: OnceLock<Config> = OnceLock::new();
+
 impl Config {
     pub fn new() -> Result<Self, config::ConfigError> {
         let data_dir = get_data_dir();
@@ -44,7 +55,7 @@ impl Config {
         let mut builder = config::Config::builder()
             .set_default("data_dir", data_dir.to_str().unwrap())?
             .set_default("config_dir", config_dir.to_str().unwrap())?
-            .add_source(File::from_str(CONFIG, config::FileFormat::Json5));
+            .add_source(File::from_str(DEFAULT_CONFIG, config::FileFormat::Json5));
 
         let config_files = [
             ("config.json5", config::FileFormat::Json5),
@@ -63,8 +74,14 @@ impl Config {
             .add_source(Environment::with_prefix("SHEET_SHARK"))
             .build()?
             .try_deserialize()?;
+        
+        CONFIG.set(cfg.clone()).expect("no config set yet");
 
         Ok(cfg)
+    }
+
+    pub fn get() -> &'static Self {
+        CONFIG.get().expect("config loaded")
     }
 }
 

@@ -4,7 +4,6 @@ use color_eyre::{Result, eyre::Context};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{KeyCode, KeyEvent};
 use educe::Educe;
-use itertools::Itertools;
 use lazy_static::lazy_static;
 use ratatui::{
     prelude::*,
@@ -50,14 +49,14 @@ impl TimesheetSummary {
         let mut ticket_sums: HashMap<String, HashMap<String, Duration>> = HashMap::new();
         
         for entry in entries {
-            let project = entry.project_key.as_deref().unwrap_or("-").to_string();
+            let project = entry.project_key.to_string();
             let ticket = entry.ticket_key.as_deref().unwrap_or("-").to_string();
             let duration = Duration::minutes(entry.duration_mins as i64);
             
             if !duration.is_zero() {
                 ticket_sums
                     .entry(project)
-                    .or_insert_with(HashMap::new)
+                    .or_default()
                     .entry(ticket)
                     .and_modify(|d| *d += duration)
                     .or_insert(duration);
