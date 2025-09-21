@@ -48,7 +48,7 @@ impl Add for HomeAction {
 pub fn perform(home: &mut Home, action: HomeAction) -> Result<()> {
     if home.need_status_line_reset {
         home.need_status_line_reset = false;
-        home.send_action(Action::SetStatusLine("".into()));
+        home.send_action(Action::SetStatusLine(String::new()));
     }
     let actions = do_perform(home, action)?;
     for action in actions {
@@ -129,9 +129,9 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Vec<Action>> {
         }
         HomeAction::Export => {
             use crate::components::home::export;
-            match export::export_to_csv(&home.state.items, home.day) {
-                Ok(()) => Action::SetStatusLine("✅ Exported to CSV".into()),
-                Err(e) => Action::SetStatusLine(format!("❌ Export failed: {}", e)),
+            match export::export_timesheet(&home.state.items, home.day) {
+                Ok(()) => Action::SetStatusLine("✅ Exported to CSV and JSON".into()),
+                Err(e) => Action::SetStatusLine(format!("❌ Export failed: {e}")),
             }
         }
         HomeAction::None => return Ok(vec![]),
@@ -140,14 +140,15 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Vec<Action>> {
 }
 
 fn save_any_dirty_state(home: &mut Home) {
-    let day = home.state.timesheet.clone().map(|it| it.day);
-    if day.is_none() {
+    let day = if let Some(day) = home.state.timesheet.clone().map(|it| it.day) {
+        day
+    } else {
         return;
-    }
-    let day = day.unwrap();
+    };
 
-    let mut commands_to_send = vec![];
-    for item in home.state.items.iter_mut() {
+    let mut commands_to_send = Vec::new();
+
+    for item in &mut home.state.items {
         if item.version.should_save() {
             commands_to_send.push(persist::Command::StoreEntry {
                 entry: item.to_persist(&day),
@@ -156,6 +157,7 @@ fn save_any_dirty_state(home: &mut Home) {
             item.version.mark_sent();
         }
     }
+
     for to_delete in home.state.items_to_delete.drain(..) {
         commands_to_send.push(persist::Command::DeleteEntry(to_delete.id));
     }
