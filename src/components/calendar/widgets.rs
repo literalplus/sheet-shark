@@ -1,4 +1,11 @@
-use ratatui::{prelude::*, style::palette::tailwind, widgets::*};
+use ratatui::{
+    prelude::*,
+    style::palette::tailwind,
+    widgets::{
+        calendar::{CalendarEventStore, Monthly},
+        *,
+    },
+};
 use time::{Date, Duration, OffsetDateTime, Weekday, ext::NumericalDuration};
 
 use crate::components::calendar::TimesheetSummary;
@@ -18,11 +25,11 @@ impl<'a> TimesheetSummaryPanel<'a> {
         Self { summary }
     }
 
-    fn create_header(&self) -> Row {
+    fn create_header(&self) -> Row<'_> {
         Row::new(vec!["Project", "Ticket", "Duration"]).style(Style::new().bg(tailwind::LIME.c500))
     }
 
-    fn create_data_rows(&self) -> Vec<Row> {
+    fn create_data_rows(&self) -> Vec<Row<'_>> {
         self.summary
             .projects
             .iter()
@@ -43,7 +50,7 @@ impl<'a> TimesheetSummaryPanel<'a> {
         project_summary: &crate::components::calendar::ProjectSummary,
         ticket: &str,
         duration: &Duration,
-    ) -> Row {
+    ) -> Row<'_> {
         let project_display = self.format_project_display(project_key, project_summary);
         let duration_display = self.format_duration_display(duration);
 
@@ -82,7 +89,7 @@ impl<'a> TimesheetSummaryPanel<'a> {
             .sum()
     }
 
-    fn create_total_paragraph(&self, total_duration: Duration) -> Paragraph {
+    fn create_total_paragraph(&self, total_duration: Duration) -> Paragraph<'_> {
         let formatted_duration = self.format_duration_display(&total_duration);
 
         Paragraph::new(format!("Working time: {formatted_duration}"))
@@ -137,7 +144,7 @@ impl<'a> TimesheetCalendar<'a> {
         }
     }
 
-    fn create_calendar_events(&self) -> ratatui::widgets::calendar::CalendarEventStore {
+    fn create_calendar_events(&self) -> CalendarEventStore {
         use ratatui::widgets::calendar::CalendarEventStore;
 
         let mut events = CalendarEventStore::default();
@@ -178,11 +185,7 @@ impl<'a> TimesheetCalendar<'a> {
         events
     }
 
-    fn create_calendar_widget(
-        &self,
-    ) -> ratatui::widgets::calendar::Monthly<ratatui::widgets::calendar::CalendarEventStore> {
-        use ratatui::widgets::calendar::Monthly;
-
+    fn create_calendar_widget(&self) -> Monthly<'_, CalendarEventStore> {
         let start = self.day;
         let header_style = Style::default()
             .add_modifier(Modifier::BOLD)
