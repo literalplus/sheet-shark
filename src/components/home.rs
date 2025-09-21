@@ -22,6 +22,7 @@ use crate::{
 mod action;
 mod draw;
 mod editing;
+mod export;
 mod key_handling;
 mod movement;
 mod persist_handling;
@@ -125,11 +126,13 @@ lazy_static! {
     static ref OUTSIDE_KEYS: Vec<RelevantKey> = vec![
         RelevantKey::new("Arrows", "Move"),
         RelevantKey::new("Esc", "Exit to calendar"),
+        RelevantKey::new("e", "Export CSV"),
     ];
     static ref SELECTING_KEYS: Vec<RelevantKey> = vec![
         RelevantKey::new("Space", "Edit"),
         RelevantKey::new("s", "Split"),
         RelevantKey::new("Arrows", "Move"),
+        RelevantKey::new("e", "Export CSV"),
     ];
     static ref EDITING_KEYS: Vec<RelevantKey> = vec![RelevantKey::new("^", "Clear"),];
 }

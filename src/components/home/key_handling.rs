@@ -5,7 +5,6 @@ use crate::components::home::{
     action::HomeAction,
     editing::{EditMode, EditModeBehavior},
     movement::handle_movement,
-    state::HomeState,
 };
 
 pub fn handle(home: &mut Home, key: KeyEvent) -> HomeAction {
@@ -26,9 +25,6 @@ fn handle_outside_edit(home: &mut Home, key: KeyEvent) -> HomeAction {
         return HomeAction::None;
     }
 
-    if let Some(next_mode) = handle_jump_key(state, key) {
-        return HomeAction::EnterEditSpecific(Some(next_mode));
-    }
     let already_selecting = state.table.selected().is_some();
     if handle_movement(state, key) && !already_selecting {
         return HomeAction::EnterSelect;
@@ -58,19 +54,10 @@ fn handle_outside_edit(home: &mut Home, key: KeyEvent) -> HomeAction {
                 return HomeAction::MergeItemDown(idx);
             }
         }
+        KeyCode::Char('e') => {
+            return HomeAction::Export;
+        }
         _ => {}
     }
     HomeAction::None
-}
-
-fn handle_jump_key(state: &mut HomeState, key: KeyEvent) -> Option<EditMode> {
-    let edit_creator: Box<dyn for<'a> Fn(&'a HomeState) -> EditMode> = match key.code {
-        KeyCode::Char('#') => Box::new(|_| EditMode::of_time()),
-        KeyCode::Char('t') => Box::new(EditMode::of_ticket),
-        KeyCode::Char('e') => Box::new(EditMode::of_description),
-        KeyCode::Char('d') => Box::new(|_| EditMode::of_duration()),
-        _ => return None,
-    };
-    state.ensure_row_selected();
-    Some(edit_creator(state))
 }

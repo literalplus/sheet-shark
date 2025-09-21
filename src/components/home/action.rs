@@ -21,6 +21,7 @@ pub enum HomeAction {
     SplitItemDown(usize),
     MergeItemDown(usize),
     SuggestTickets(String),
+    Export,
 }
 
 impl From<ErrReport> for HomeAction {
@@ -125,6 +126,13 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Vec<Action>> {
                 home.send_persist(Command::SuggestTickets { query });
             }
             return Ok(vec![]);
+        }
+        HomeAction::Export => {
+            use crate::components::home::export;
+            match export::export_to_csv(&home.state.items, home.day) {
+                Ok(()) => Action::SetStatusLine("✅ Exported to CSV".into()),
+                Err(e) => Action::SetStatusLine(format!("❌ Export failed: {}", e)),
+            }
         }
         HomeAction::None => return Ok(vec![]),
     };

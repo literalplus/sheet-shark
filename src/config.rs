@@ -83,6 +83,11 @@ impl Config {
     pub fn get() -> &'static Self {
         CONFIG.get().expect("config loaded")
     }
+
+    #[cfg(test)]
+    pub fn set_for_tests(config: Config) {
+        CONFIG.set(config).expect("config not already set in tests");
+    }
 }
 
 pub fn get_data_dir() -> PathBuf {
