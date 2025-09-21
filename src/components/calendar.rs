@@ -160,14 +160,15 @@ impl Component for Calendar {
 
         let detail_block = Block::new()
             .borders(Borders::LEFT)
-            .padding(Padding::uniform(1));
+            .padding(Padding::horizontal(1));
         frame.render_widget(&detail_block, detail_area);
         let detail_area = detail_block.inner(detail_area);
 
         match &self.summary {
             Some(summary) => {
-                let header = Row::new(vec!["Project", "Ticket", "Duration"]);
-                let rows: Vec<Row> = summary
+                let header = Row::new(vec!["Project", "Ticket", "Duration"])
+                    .style(Style::new().bg(tailwind::LIME.c500));
+                let data_rows: Vec<_> = summary
                     .projects
                     .iter()
                     .flat_map(|(project_key, project_summary)| {
@@ -177,10 +178,8 @@ impl Component for Calendar {
                             .map(move |(ticket, duration)| {
                                 let hours = duration.whole_hours();
                                 let minutes = duration.whole_minutes() % 60;
-                                let display_name = project_summary
-                                    .internal_name
-                                    .as_deref()
-                                    .unwrap_or("❔");
+                                let display_name =
+                                    project_summary.internal_name.as_deref().unwrap_or("❔");
                                 Row::new(vec![
                                     format!("{} ({})", display_name, project_key),
                                     ticket.clone(),
@@ -190,18 +189,48 @@ impl Component for Calendar {
                     })
                     .collect();
 
-                let table = Table::new(
-                    rows,
-                    [
-                        Constraint::Percentage(40),
-                        Constraint::Percentage(40),
-                        Constraint::Percentage(20),
-                    ],
-                )
-                .header(header.style(Style::default().add_modifier(Modifier::BOLD)))
-                .block(Block::default().title("Time Summary"));
+                let rows: Vec<Row> = data_rows.into_iter().collect();
 
-                frame.render_widget(table, detail_area);
+                // Calculate total duration excluding "Pause" projects
+                let total_duration: Duration = summary
+                    .projects
+                    .iter()
+                    .filter(|(_, project_summary)| {
+                        project_summary.internal_name.as_deref() != Some("Pause")
+                    })
+                    .flat_map(|(_, project_summary)| project_summary.ticket_sums.values())
+                    .sum();
+
+                let total_hours = total_duration.whole_hours();
+                let total_minutes = total_duration.whole_minutes() % 60;
+
+                // Table constraints for layout calculation
+                let constraints = [
+                    Constraint::Percentage(40),
+                    Constraint::Percentage(40),
+                    Constraint::Percentage(20),
+                ];
+
+                let table = Table::new(rows, constraints).header(header);
+
+                // Split area for table and total
+                let layout = Layout::vertical([
+                    Constraint::Fill(1),
+                    Constraint::Length(1), // Space for total line
+                ]);
+                let areas = layout.split(detail_area);
+                let table_area = areas[0];
+                let total_area = areas[1];
+
+                frame.render_widget(table, table_area);
+
+                // Right-aligned total at the bottom
+                let total_text = Paragraph::new(format!(
+                    "Working time: {total_hours}h {total_minutes:02}m"
+                ))
+                .style(Style::new().italic())
+                .alignment(Alignment::Right);
+                frame.render_widget(total_text, total_area);
             }
             None => {
                 let text = Text::from("Loading summary...");
@@ -326,7 +355,10 @@ impl Calendar {
 }
 
 lazy_static! {
-    static ref KEYS: Vec<RelevantKey> = vec![RelevantKey::new("Enter", "Select"),];
+    static ref KEYS: Vec<RelevantKey> = vec![
+        RelevantKey::new("Enter", "Select"),
+        RelevantKey::new("c", "Copy summary"),
+    ];
     static ref CLIPBOARD: Mutex<ClipboardContext> = ClipboardContext::new()
         .expect("init clipboard context")
         .into();
