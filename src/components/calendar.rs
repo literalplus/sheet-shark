@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Mutex};
 
-use color_eyre::Result;
+use color_eyre::{Result, eyre::Context};
+use copypasta::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{KeyCode, KeyEvent};
 use educe::Educe;
 use itertools::Itertools;
@@ -13,6 +14,7 @@ use ratatui::{
         *,
     },
 };
+use serde::Serialize;
 use time::{Date, Duration, OffsetDateTime, Weekday, ext::NumericalDuration, format_description};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -38,29 +40,29 @@ pub struct Calendar {
     summary: Option<TimesheetSummary>,
 }
 
+#[derive(Serialize)]
 struct TimesheetSummary {
-    ticket_sums: HashMap<(String, String), Duration>,
+    ticket_sums: HashMap<String, HashMap<String, Duration>>,
 }
 
 impl TimesheetSummary {
     fn new(entries: Vec<TimeEntry>) -> Self {
-        let ticket_sums = entries
-            .into_iter()
-            .into_group_map_by(|entry| {
-                let project = entry.project_key.as_deref().unwrap_or("-").to_string();
-                let ticket = entry.ticket_key.as_deref().unwrap_or("-").to_string();
-                (project, ticket)
-            })
-            .into_iter()
-            .map(|(key, group)| {
-                let total_duration: Duration = group
-                    .into_iter()
-                    .map(|entry| Duration::minutes(entry.duration_mins as i64))
-                    .sum();
-                (key, total_duration)
-            })
-            .filter(|(_, total)| !total.is_zero())
-            .collect();
+        let mut ticket_sums: HashMap<String, HashMap<String, Duration>> = HashMap::new();
+        
+        for entry in entries {
+            let project = entry.project_key.as_deref().unwrap_or("-").to_string();
+            let ticket = entry.ticket_key.as_deref().unwrap_or("-").to_string();
+            let duration = Duration::minutes(entry.duration_mins as i64);
+            
+            if !duration.is_zero() {
+                ticket_sums
+                    .entry(project)
+                    .or_insert_with(HashMap::new)
+                    .entry(ticket)
+                    .and_modify(|d| *d += duration)
+                    .or_insert(duration);
+            }
+        }
 
         Self { ticket_sums }
     }
@@ -90,6 +92,15 @@ impl Component for Calendar {
         match key.code {
             _ if self.handle_day_movement(key) => Ok(None),
             KeyCode::Enter => Ok(Some(Action::SetActivePage(Page::Home { day: self.day }))),
+            KeyCode::Char('c') => {
+                let json = serde_json::to_string(&self.summary)
+                    .context("seralizing timesheet summary")?;
+                let mut clip = CLIPBOARD.lock().expect("clipboard mutex not poisoned");
+                match clip.set_contents(json) {
+                    Ok(_) => Ok(Some(Action::SetStatusLine("Summary copied!".into()))),
+                    Err(_) => Ok(Some(Action::SetStatusLine("Failed to copy".into()))),
+                }
+            }
             _ => Ok(None),
         }
     }
@@ -136,14 +147,16 @@ impl Component for Calendar {
                 let rows: Vec<Row> = summary
                     .ticket_sums
                     .iter()
-                    .map(|((project, ticket), duration)| {
-                        let hours = duration.whole_hours();
-                        let minutes = duration.whole_minutes() % 60;
-                        Row::new(vec![
-                            project.clone(),
-                            ticket.clone(),
-                            format!("{}h {:02}m", hours, minutes),
-                        ])
+                    .flat_map(|(project, tickets)| {
+                        tickets.iter().map(move |(ticket, duration)| {
+                            let hours = duration.whole_hours();
+                            let minutes = duration.whole_minutes() % 60;
+                            Row::new(vec![
+                                project.clone(),
+                                ticket.clone(),
+                                format!("{}h {:02}m", hours, minutes),
+                            ])
+                        })
                     })
                     .collect();
 
@@ -284,4 +297,7 @@ impl Calendar {
 
 lazy_static! {
     static ref KEYS: Vec<RelevantKey> = vec![RelevantKey::new("Enter", "Select"),];
+    static ref CLIPBOARD: Mutex<ClipboardContext> = ClipboardContext::new()
+        .expect("init clipboard context")
+        .into();
 }

@@ -84,7 +84,7 @@ impl App {
                 tui.suspend()?;
                 action_tx.send(Action::Resume)?;
                 action_tx.send(Action::ClearScreen)?;
-                // tui.mouse(true);
+                // tui.mouse(true); // Enabling this breaks copying text from the terminal
                 tui.enter()?;
             } else if self.should_quit {
                 tui.stop()?;
