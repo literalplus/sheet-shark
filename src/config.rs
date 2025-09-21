@@ -74,7 +74,7 @@ impl Config {
             .add_source(Environment::with_prefix("SHEET_SHARK"))
             .build()?
             .try_deserialize()?;
-        
+
         CONFIG.set(cfg.clone()).expect("no config set yet");
 
         Ok(cfg)

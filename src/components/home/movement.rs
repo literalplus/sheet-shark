@@ -20,7 +20,7 @@ pub fn handle_movement(state: &mut HomeState, key: KeyEvent) -> bool {
         KeyCode::Up => {
             if state.table.selected() != Some(0) {
                 state.table.select_previous();
-                return false;
+                return true;
             }
             state.ensure_column_selected();
             true
@@ -28,7 +28,7 @@ pub fn handle_movement(state: &mut HomeState, key: KeyEvent) -> bool {
         KeyCode::Down => {
             if state.table.selected() != Some(state.items.len() - 1) {
                 state.table.select_next();
-                return false;
+                return true;
             }
             state.ensure_column_selected();
             true

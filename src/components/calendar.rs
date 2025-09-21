@@ -20,6 +20,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use super::Component;
 use crate::{
     action::{Action, Page, RelevantKey},
+    config::Config,
     layout::LayoutSlot,
     persist::{self, Command, Event, TimeEntry},
 };
@@ -40,30 +41,53 @@ pub struct Calendar {
 }
 
 #[derive(Serialize)]
+struct ProjectSummary {
+    internal_name: Option<String>,
+    ticket_sums: HashMap<String, Duration>,
+}
+
+#[derive(Serialize)]
 struct TimesheetSummary {
-    ticket_sums: HashMap<String, HashMap<String, Duration>>,
+    projects: HashMap<String, ProjectSummary>,
 }
 
 impl TimesheetSummary {
     fn new(entries: Vec<TimeEntry>) -> Self {
-        let mut ticket_sums: HashMap<String, HashMap<String, Duration>> = HashMap::new();
-        
+        let config = Config::get();
+        let mut projects: HashMap<String, ProjectSummary> = HashMap::new();
+
         for entry in entries {
-            let project = entry.project_key.to_string();
-            let ticket = entry.ticket_key.as_deref().unwrap_or("-").to_string();
             let duration = Duration::minutes(entry.duration_mins as i64);
-            
-            if !duration.is_zero() {
-                ticket_sums
-                    .entry(project)
-                    .or_default()
-                    .entry(ticket)
-                    .and_modify(|d| *d += duration)
-                    .or_insert(duration);
+            if duration.is_zero() {
+                continue;
             }
+
+            let project_key = &entry.project_key;
+            let ticket = entry.ticket_key.as_deref().unwrap_or("-").to_string();
+
+            let project_summary = projects
+                .entry(project_key.clone())
+                .or_insert_with(|| Self::create_project_summary(project_key, config));
+
+            *project_summary
+                .ticket_sums
+                .entry(ticket)
+                .or_insert(Duration::ZERO) += duration;
         }
 
-        Self { ticket_sums }
+        Self { projects }
+    }
+
+    fn create_project_summary(project_key: &str, config: &Config) -> ProjectSummary {
+        let internal_name = config
+            .projects
+            .get(project_key)
+            .map(|p| p.internal_name.clone());
+
+        ProjectSummary {
+            internal_name,
+            ticket_sums: HashMap::new(),
+        }
     }
 }
 
@@ -92,8 +116,8 @@ impl Component for Calendar {
             _ if self.handle_day_movement(key) => Ok(None),
             KeyCode::Enter => Ok(Some(Action::SetActivePage(Page::Home { day: self.day }))),
             KeyCode::Char('c') => {
-                let json = serde_json::to_string(&self.summary)
-                    .context("seralizing timesheet summary")?;
+                let json =
+                    serde_json::to_string(&self.summary).context("seralizing timesheet summary")?;
                 let mut clip = CLIPBOARD.lock().expect("clipboard mutex not poisoned");
                 match clip.set_contents(json) {
                     Ok(_) => Ok(Some(Action::SetStatusLine("Summary copied!".into()))),
@@ -144,18 +168,25 @@ impl Component for Calendar {
             Some(summary) => {
                 let header = Row::new(vec!["Project", "Ticket", "Duration"]);
                 let rows: Vec<Row> = summary
-                    .ticket_sums
+                    .projects
                     .iter()
-                    .flat_map(|(project, tickets)| {
-                        tickets.iter().map(move |(ticket, duration)| {
-                            let hours = duration.whole_hours();
-                            let minutes = duration.whole_minutes() % 60;
-                            Row::new(vec![
-                                project.clone(),
-                                ticket.clone(),
-                                format!("{}h {:02}m", hours, minutes),
-                            ])
-                        })
+                    .flat_map(|(project_key, project_summary)| {
+                        project_summary
+                            .ticket_sums
+                            .iter()
+                            .map(move |(ticket, duration)| {
+                                let hours = duration.whole_hours();
+                                let minutes = duration.whole_minutes() % 60;
+                                let display_name = project_summary
+                                    .internal_name
+                                    .as_deref()
+                                    .unwrap_or("❔");
+                                Row::new(vec![
+                                    format!("{} ({})", display_name, project_key),
+                                    ticket.clone(),
+                                    format!("{}h {:02}m", hours, minutes),
+                                ])
+                            })
                     })
                     .collect();
 

@@ -1,7 +1,6 @@
-use crate::{persist::schema::time_entry::ticket_key, shared::DataVersionNumber};
+use crate::shared::DataVersionNumber;
 
 use super::schema::*;
-use chrono::NaiveTime;
 use diesel::prelude::*;
 use time::Date;
 use type_safe_id::{StaticType, TypeSafeId};
