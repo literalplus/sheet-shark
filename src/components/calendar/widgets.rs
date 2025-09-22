@@ -68,7 +68,7 @@ impl<'a> TimesheetSummaryPanel<'a> {
         if project_key == BREAK_PROJECT_KEY {
             return "🏖️ Break".into();
         }
-        let display_name = project_summary.internal_name.as_deref().unwrap_or("❔");
+        let display_name = project_summary.display_name();
         format!("{display_name} ({project_key}) ")
     }
 

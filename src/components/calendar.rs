@@ -20,6 +20,8 @@ use crate::{
 mod widgets;
 use widgets::TimesheetCalendar;
 
+mod export;
+
 #[derive(Educe)]
 #[educe(Default)]
 pub struct Calendar {
@@ -66,6 +68,21 @@ impl Component for Calendar {
                 match clip.set_contents(json) {
                     Ok(_) => Ok(Some(Action::SetStatusLine("Summary copied!".into()))),
                     Err(_) => Ok(Some(Action::SetStatusLine("Failed to copy".into()))),
+                }
+            }
+            KeyCode::Char('e') => {
+                if let Some(summary) = &self.summary {
+                    match export::export_to_jira(self.day, summary) {
+                        Ok(count) => Ok(Some(Action::SetStatusLine(format!(
+                            "Opened {} Jira URLs",
+                            count
+                        )))),
+                        Err(e) => Ok(Some(Action::SetStatusLine(format!("Export failed: {}", e)))),
+                    }
+                } else {
+                    Ok(Some(Action::SetStatusLine(
+                        "No timesheet data to export".into(),
+                    )))
                 }
             }
             _ => Ok(None),
@@ -161,6 +178,7 @@ lazy_static! {
     static ref KEYS: Vec<RelevantKey> = vec![
         RelevantKey::new("Enter", "Select"),
         RelevantKey::new("c", "Copy summary"),
+        RelevantKey::new("e", "Export to Jira"),
     ];
     static ref CLIPBOARD: Mutex<ClipboardContext> = ClipboardContext::new()
         .expect("init clipboard context")

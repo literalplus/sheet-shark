@@ -3,12 +3,25 @@ use std::collections::HashMap;
 use serde::Serialize;
 use time::Duration;
 
-use crate::{config::Config, persist::TimeEntry, shared::BREAK_PROJECT_KEY};
+use crate::{
+    config::{Config, ProjectConfig},
+    persist::TimeEntry,
+    shared::BREAK_PROJECT_KEY,
+};
 
 #[derive(Serialize)]
 pub struct ProjectSummary {
-    pub internal_name: Option<String>,
+    pub config: Option<ProjectConfig>,
     pub ticket_sums: HashMap<String, Duration>,
+}
+
+impl ProjectSummary {
+    pub fn display_name(&self) -> &str {
+        self.config
+            .as_ref()
+            .map(|c| c.internal_name.as_str())
+            .unwrap_or("❔")
+    }
 }
 
 #[derive(Serialize)]
@@ -92,13 +105,10 @@ impl TimesheetSummary {
     }
 
     fn create_project_summary(project_key: &str, config: &Config) -> ProjectSummary {
-        let internal_name = config
-            .projects
-            .get(project_key)
-            .map(|p| p.internal_name.clone());
+        let project_config = config.projects.get(project_key).cloned();
 
         ProjectSummary {
-            internal_name,
+            config: project_config,
             ticket_sums: HashMap::new(),
         }
     }

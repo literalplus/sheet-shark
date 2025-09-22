@@ -6,7 +6,7 @@ use color_eyre::Result;
 use config::{Environment, File};
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 const DEFAULT_CONFIG: &str = include_str!("../.config/config.json5");
 
@@ -18,7 +18,7 @@ pub struct AppConfig {
     pub config_dir: PathBuf,
 }
 
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Clone, Debug, Deserialize, Default, Serialize)]
 pub struct ProjectConfig {
     pub internal_name: String,
     pub jira_url: Option<String>,
