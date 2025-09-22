@@ -1,0 +1,4 @@
+default_project_key: E
+projects:
+  E:
+    internal_name: "Example!"

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Sheet Shark 🦈
+Comment=Funny CLI fish that helps with timesheets
+Encording=UTF-8
+Exec=sheet-shark
+Terminal=true
+Icon=sheet-shark
