@@ -25,18 +25,8 @@ You can then run via the `sheet-shark` application added to your launcher
 
 ## Configuration
 
-Locate the config directory using:
-
-```
-$ cargo run -- --version
-sheet-shark 0.1.0- (2025-09-21)
-
-Config directory: /home/lit/.config/sheet-shark <---
-Data directory: /home/lit/.local/share/sheet-shark
-```
-
-In that directory you will find a `config.yaml` that you can adjust to your
-preferences.
+You can open the config directory in the calendar view by pressing `Shift+F`.
+The data directory is accessible using `F`.
 
 ## Development
 

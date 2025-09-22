@@ -82,6 +82,32 @@ impl Component for Calendar {
                     )))
                 }
             }
+            KeyCode::Char('f') => {
+                let data_dir = crate::config::get_data_dir();
+                match std::process::Command::new("xdg-open")
+                    .arg(&data_dir)
+                    .spawn()
+                {
+                    Ok(_) => Ok(Some(Action::SetStatusLine("Opened data directory".into()))),
+                    Err(e) => Ok(Some(Action::SetStatusLine(format!(
+                        "Failed to open directory: {e}"
+                    )))),
+                }
+            }
+            KeyCode::Char('F') => {
+                let config_dir = crate::config::get_config_dir();
+                match std::process::Command::new("xdg-open")
+                    .arg(&config_dir)
+                    .spawn()
+                {
+                    Ok(_) => Ok(Some(Action::SetStatusLine(
+                        "Opened config directory".into(),
+                    ))),
+                    Err(e) => Ok(Some(Action::SetStatusLine(format!(
+                        "Failed to open directory: {e}"
+                    )))),
+                }
+            }
             _ => Ok(None),
         }
     }
