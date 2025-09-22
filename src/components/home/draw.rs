@@ -36,10 +36,22 @@ pub(super) fn draw(home: &mut Home, frame: &mut Frame, area: Rect) -> Result<()>
 fn render_frame(home: &mut Home, frame: &mut Frame, area: Rect) -> Result<Rect> {
     let area = crate::layout::main_vert(LayoutSlot::MainCanvas, area);
 
+    let total_hours = home.total_working_hours();
+    let title = if total_hours.is_zero() {
+        home.day.format(TITLE_FORMAT)?
+    } else {
+        format!(
+            "{} - {}h{}m",
+            home.day.format(TITLE_FORMAT)?,
+            total_hours.whole_hours(),
+            total_hours.whole_minutes() % 60
+        )
+    };
+
     let block = Block::new()
         .borders(!Borders::BOTTOM)
         .border_type(BorderType::Rounded)
-        .title(home.day.format(TITLE_FORMAT)?);
+        .title(title);
 
     frame.render_widget(&block, area);
     Ok(block.inner(area))

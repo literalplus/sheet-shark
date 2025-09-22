@@ -95,6 +95,7 @@ impl PersistHandler {
     async fn try_handle(&mut self, cmd: model::Command) {
         match handle::handle(&mut self.conn, cmd).await {
             Ok(event) => {
+                debug!("Persistence response: {event:?}");
                 if let Err(err) = self.evt_tx.send(event) {
                     debug!("Unable to send persistence event: {err:?}");
                 }

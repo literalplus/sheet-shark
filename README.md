@@ -35,16 +35,12 @@ Config directory: /home/lit/.config/sheet-shark <---
 Data directory: /home/lit/.local/share/sheet-shark
 ```
 
-In that directory, create a file `config.yaml` that defines your projects, like this:
-
-```yaml
-default_project_key: "M" # empty project cells will use this project
-projects:
-  M: # This is what you enter in the table
-    internal_name: "My main project" # This is used for data export to the internal time booking tool
-    jira_url: "https://your-customer.atlassian.net/" # optional
-```
+In that directory you will find a `config.yaml` that you can adjust to your
+preferences.
 
 ## Development
 
 For the `diesel` CLI, you can use `export DATABASE_URL=~/.local/share/sheet-shark/sharkdb.sqlite`.
+
+If you need more logs run `RUST_LOG=debug cargo run` and check
+`~/.local/share/sheet-shark/sheet-shark.log`.

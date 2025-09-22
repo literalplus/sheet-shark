@@ -45,6 +45,8 @@ pub struct ProjectSummary {
 #[derive(Serialize)]
 pub struct TimesheetSummary {
     pub projects: HashMap<String, ProjectSummary>,
+    pub start_time: Option<String>,
+    pub end_time: Option<String>,
 }
 
 impl TimesheetSummary {
@@ -52,7 +54,10 @@ impl TimesheetSummary {
         let config = Config::get();
         let mut projects: HashMap<String, ProjectSummary> = HashMap::new();
 
-        for entry in entries {
+        let mut start_time: Option<String> = None;
+        let mut end_time: Option<String> = None;
+
+        for entry in entries.iter() {
             let duration = Duration::minutes(entry.duration_mins as i64);
             if duration.is_zero() {
                 continue;
@@ -71,7 +76,50 @@ impl TimesheetSummary {
                 .or_insert(Duration::ZERO) += duration;
         }
 
-        Self { projects }
+        // Calculate start and end times from non-zero duration entries
+        let working_entries: Vec<_> = entries
+            .iter()
+            .filter(|entry| entry.duration_mins > 0)
+            .collect();
+
+        if !working_entries.is_empty() {
+            // Find earliest start time
+            start_time = working_entries
+                .iter()
+                .map(|entry| &entry.start_time)
+                .min()
+                .cloned();
+
+            // Find latest end time (start_time + duration)
+            end_time = working_entries
+                .iter()
+                .filter_map(|entry| {
+                    // Parse start_time and add duration to get end_time
+                    let start_parts: Vec<&str> = entry.start_time.split(':').collect();
+                    if start_parts.len() == 2 {
+                        if let (Ok(hours), Ok(minutes)) =
+                            (start_parts[0].parse::<u32>(), start_parts[1].parse::<u32>())
+                        {
+                            let start_minutes = hours * 60 + minutes;
+                            let end_minutes = start_minutes + entry.duration_mins as u32;
+                            let end_hours = end_minutes / 60;
+                            let end_mins = end_minutes % 60;
+                            Some(format!("{:02}:{:02}", end_hours, end_mins))
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .max();
+        }
+
+        Self {
+            projects,
+            start_time,
+            end_time,
+        }
     }
 
     fn create_project_summary(project_key: &str, config: &Config) -> ProjectSummary {
@@ -167,6 +215,7 @@ impl Component for Calendar {
                     .expect("sent initial keys");
                 self.day = day;
                 self.suspended = false;
+                self.fetch_for_new_day()?;
             }
             Action::SetActivePage(_) => {
                 self.suspended = true;

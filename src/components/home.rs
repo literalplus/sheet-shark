@@ -17,6 +17,7 @@ use crate::{
     },
     config::Config,
     persist,
+    shared::BREAK_PROJECT_KEY,
 };
 
 mod action;
@@ -62,6 +63,16 @@ impl Home {
             .expect("action_tx initialised")
             .send(action)
             .expect("able to send action msg")
+    }
+
+    pub fn total_working_hours(&self) -> time::Duration {
+        self.state
+            .items
+            .iter()
+            .filter(|item| item.project != BREAK_PROJECT_KEY)
+            .map(|item| time::Duration::minutes(item.duration.as_secs() as i64 / 60))
+            .filter(|duration| !duration.is_zero())
+            .fold(time::Duration::ZERO, |acc, duration| acc + duration)
     }
 }
 

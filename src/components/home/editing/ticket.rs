@@ -110,7 +110,7 @@ enum SuggestAction {
 
 impl TicketsSuggestion {
     pub fn is_active(&self) -> bool {
-        !self.query.is_empty()
+        !self.query.is_empty() && !self.suggestions.is_empty()
     }
 
     pub fn handle_result(&mut self, query: String, suggestions: Vec<String>) {

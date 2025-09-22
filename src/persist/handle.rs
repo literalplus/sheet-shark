@@ -4,7 +4,6 @@ use color_eyre::{Result, eyre::Context};
 use diesel::{
     RunQueryDsl, SqliteConnection,
     dsl::count,
-    expression::{ValidGrouping, is_aggregate},
     prelude::*,
     sql_types::{Nullable, Text},
 };
@@ -137,12 +136,9 @@ async fn load_timesheet_or_dummy(conn: &mut SqliteConnection, day: Date) -> Resu
 }
 
 define_sql_function!(fn lower(x: Nullable<Text>) -> Text);
-impl ValidGrouping<lower_utils::lower<time_entry::ticket_key>> for lower<time_entry::ticket_key> {
-    type IsAggregate = is_aggregate::No;
-}
 
 async fn suggest_tickets(conn: &mut SqliteConnection, query: String) -> Result<Event> {
-    let query = query.to_lowercase();
+    let query_lower = query.to_lowercase();
     let six_months_ago = OffsetDateTime::now_local()?
         .date()
         .saturating_sub((6 * 30).days());
@@ -153,17 +149,17 @@ async fn suggest_tickets(conn: &mut SqliteConnection, query: String) -> Result<E
 
     let mut select = time_entry::table
         .filter(filter)
-        .group_by(lower(time_entry::ticket_key))
-        .select(lower(time_entry::ticket_key))
+        .group_by(time_entry::ticket_key)
+        .select(time_entry::ticket_key.assume_not_null())
         .order_by(count(time_entry::ticket_key))
         .into_boxed();
 
-    if let Some((jira_project, issue_key)) = query.split_once('-') {
+    if let Some((jira_project, issue_key)) = query_lower.split_once('-') {
         select = select
             .filter(lower(time_entry::ticket_key).like(format!("{jira_project}%")))
             .filter(lower(time_entry::ticket_key).like(format!("%-{issue_key}%")));
     } else {
-        select = select.filter(lower(time_entry::ticket_key).like(format!("{query}%")));
+        select = select.filter(lower(time_entry::ticket_key).like(format!("{query_lower}%")));
     }
 
     let ticket_keys = select.get_results(conn)?;

@@ -62,6 +62,9 @@ impl<'a> TimesheetSummaryPanel<'a> {
         project_key: &str,
         project_summary: &crate::components::calendar::ProjectSummary,
     ) -> String {
+        if project_key == BREAK_PROJECT_KEY {
+            return "🏖️ Break".into();
+        }
         let display_name = project_summary.internal_name.as_deref().unwrap_or("❔");
         format!("{display_name} ({project_key}) ")
     }
@@ -82,9 +85,7 @@ impl<'a> TimesheetSummaryPanel<'a> {
         self.summary
             .projects
             .iter()
-            .filter(|(_, project_summary)| {
-                project_summary.internal_name.as_deref() != Some(BREAK_PROJECT_KEY)
-            })
+            .filter(|(project_key, _)| project_key != &BREAK_PROJECT_KEY)
             .flat_map(|(_, project_summary)| project_summary.ticket_sums.values())
             .sum()
     }
@@ -92,7 +93,16 @@ impl<'a> TimesheetSummaryPanel<'a> {
     fn create_total_paragraph(&self, total_duration: Duration) -> Paragraph<'_> {
         let formatted_duration = self.format_duration_display(&total_duration);
 
-        Paragraph::new(format!("Working time: {formatted_duration}"))
+        let mut text = String::new();
+
+        // Add start and end times if available
+        if let (Some(start), Some(end)) = (&self.summary.start_time, &self.summary.end_time) {
+            text.push_str(&format!("{} - {} | ", start, end));
+        }
+
+        text.push_str(&format!("Working time: {}", formatted_duration));
+
+        Paragraph::new(text)
             .style(Style::new().italic())
             .alignment(Alignment::Right)
     }
