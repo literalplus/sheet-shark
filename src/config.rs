@@ -86,7 +86,7 @@ impl Config {
 
     #[cfg(test)]
     pub fn set_for_tests(config: Config) {
-        CONFIG.set(config).expect("config not already set in tests");
+        let _ = CONFIG.set(config);
     }
 }
 

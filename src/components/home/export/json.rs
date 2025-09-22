@@ -152,11 +152,7 @@ mod tests {
                 ..Default::default()
             };
 
-            if let Err(_) = std::panic::catch_unwind(|| {
-                Config::set_for_tests(test_config.clone());
-            }) {
-                // Config was already set, that's fine for our tests
-            }
+            Config::set_for_tests(test_config);
         });
     }
 
@@ -207,14 +203,11 @@ mod tests {
             json_value["projects"]["TEST-PROJECT"]["internal_name"],
             "Test Project"
         );
-        assert_eq!(
-            json_value["projects"]["TEST-PROJECT"]["is_configured"],
-            true
-        );
+        assert_eq!(json_value["projects"]["TEST-PROJECT"]["kind"], "Configured");
 
         assert!(json_value["projects"]["W"].is_object());
         assert_eq!(json_value["projects"]["W"]["internal_name"], "Work Project");
-        assert_eq!(json_value["projects"]["W"]["is_configured"], true);
+        assert_eq!(json_value["projects"]["W"]["kind"], "Configured");
 
         // Check entries
         let entries = json_value["entries"].as_array().unwrap();
