@@ -1,5 +1,7 @@
 use tracing::warn;
 
+pub mod summary;
+
 pub const BREAK_PROJECT_KEY: &str = "x";
 
 /// Simple local version tracker for saving with a single actor.

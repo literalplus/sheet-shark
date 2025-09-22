@@ -8,7 +8,10 @@ use ratatui::{
 };
 use time::{Date, Duration, OffsetDateTime, Weekday, ext::NumericalDuration};
 
-use crate::{components::calendar::TimesheetSummary, shared::BREAK_PROJECT_KEY};
+use crate::shared::{
+    BREAK_PROJECT_KEY,
+    summary::{ProjectSummary, TimesheetSummary},
+};
 
 pub struct TimesheetSummaryPanel<'a> {
     summary: &'a TimesheetSummary,
@@ -47,7 +50,7 @@ impl<'a> TimesheetSummaryPanel<'a> {
     fn create_single_row(
         &self,
         project_key: &str,
-        project_summary: &crate::components::calendar::ProjectSummary,
+        project_summary: &ProjectSummary,
         ticket: &str,
         duration: &Duration,
     ) -> Row<'_> {
@@ -60,7 +63,7 @@ impl<'a> TimesheetSummaryPanel<'a> {
     fn format_project_display(
         &self,
         project_key: &str,
-        project_summary: &crate::components::calendar::ProjectSummary,
+        project_summary: &ProjectSummary,
     ) -> String {
         if project_key == BREAK_PROJECT_KEY {
             return "🏖️ Break".into();
@@ -79,15 +82,6 @@ impl<'a> TimesheetSummaryPanel<'a> {
             (h, 0) => format!("{h}h"),
             (h, m) => format!("{h}h {m:02}m"),
         }
-    }
-
-    fn calculate_total_duration(&self) -> Duration {
-        self.summary
-            .projects
-            .iter()
-            .filter(|(project_key, _)| project_key != &BREAK_PROJECT_KEY)
-            .flat_map(|(_, project_summary)| project_summary.ticket_sums.values())
-            .sum()
     }
 
     fn create_total_paragraph(&self, total_duration: Duration) -> Paragraph<'_> {
@@ -115,7 +109,7 @@ impl Widget for TimesheetSummaryPanel<'_> {
     {
         let header = self.create_header();
         let rows = self.create_data_rows();
-        let total_duration = self.calculate_total_duration();
+        let total_duration = self.summary.calculate_total_duration();
 
         let table = Table::new(rows, TABLE_CONSTRAINTS).header(header);
 
