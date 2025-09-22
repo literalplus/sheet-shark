@@ -126,13 +126,14 @@ lazy_static! {
     static ref OUTSIDE_KEYS: Vec<RelevantKey> = vec![
         RelevantKey::new("Arrows", "Move"),
         RelevantKey::new("Esc", "Exit to calendar"),
-        RelevantKey::new("e", "Export CSV"),
+        RelevantKey::new("e", "Export"),
     ];
     static ref SELECTING_KEYS: Vec<RelevantKey> = vec![
         RelevantKey::new("Space", "Edit"),
         RelevantKey::new("s", "Split"),
         RelevantKey::new("Arrows", "Move"),
-        RelevantKey::new("e", "Export CSV"),
+        RelevantKey::new("e", "Export"),
+        RelevantKey::new("x", "Break"),
     ];
     static ref EDITING_KEYS: Vec<RelevantKey> = vec![RelevantKey::new("^", "Clear"),];
 }

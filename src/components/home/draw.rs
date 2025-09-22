@@ -5,6 +5,7 @@ use crate::{
         state::{TIME_ITEM_WIDTH, TimeItem},
     },
     layout::LayoutSlot,
+    shared::BREAK_PROJECT_KEY,
 };
 use color_eyre::Result;
 use ratatui::{
@@ -82,12 +83,21 @@ fn draw_item(
 ) -> impl Fn((usize, &TimeItem)) -> Row {
     move |(i, item)| -> Row {
         let is_selected = Some(i) == selected_idx;
-        let row = if is_selected && let Some(edit_mode) = edit_mode {
+        if is_selected && let Some(edit_mode) = edit_mode {
             edit_mode.style_selected_item(item)
         } else {
-            item.as_row()
-        };
-        zebra_stripe(i, row)
+            create_row_for_item(i, item)
+        }
+    }
+}
+
+fn create_row_for_item(i: usize, item: &TimeItem) -> Row<'_> {
+    if item.project == BREAK_PROJECT_KEY {
+        let mut cells = item.as_cells();
+        cells[2] = "🏖️🏖️🏖️".into();
+        Row::new(cells).bg(tailwind::EMERALD.c900)
+    } else {
+        zebra_stripe(i, item.as_row())
     }
 }
 

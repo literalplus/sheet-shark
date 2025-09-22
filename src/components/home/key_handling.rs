@@ -57,6 +57,9 @@ fn handle_outside_edit(home: &mut Home, key: KeyEvent) -> HomeAction {
         KeyCode::Char('e') => {
             return HomeAction::Export;
         }
+        KeyCode::Char('x') => {
+            return HomeAction::ToggleBreak;
+        }
         _ => {}
     }
     HomeAction::None

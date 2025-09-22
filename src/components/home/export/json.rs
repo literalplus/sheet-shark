@@ -4,7 +4,7 @@ use color_eyre::{Result, eyre::Context};
 use serde::Serialize;
 use time::Date;
 
-use crate::{components::home::state::TimeItem, config::Config};
+use crate::{components::home::state::TimeItem, config::Config, shared::BREAK_PROJECT_KEY};
 
 use super::get_project_key;
 
@@ -22,9 +22,16 @@ struct JsonMeta {
 }
 
 #[derive(Serialize)]
+enum ProjectKind {
+    AdHoc,
+    Configured,
+    SpecialBreak,
+}
+
+#[derive(Serialize)]
 struct JsonProject {
     internal_name: String,
-    is_configured: bool,
+    kind: ProjectKind,
 }
 
 #[derive(Serialize)]
@@ -55,16 +62,20 @@ pub fn generate_json_content(items: &[TimeItem], day: Date) -> Result<String> {
     let projects = used_projects
         .into_iter()
         .map(|project_key| {
-            let project_info = if let Some(project_config) = config.projects.get(&project_key) {
-                JsonProject {
-                    internal_name: project_config.internal_name.clone(),
-                    is_configured: true,
-                }
+            let config = config.projects.get(&project_key);
+            let internal_name = if let Some(config) = config {
+                config.internal_name.clone()
             } else {
-                JsonProject {
-                    internal_name: project_key.clone(),
-                    is_configured: false,
-                }
+                project_key.clone()
+            };
+            let kind = match config {
+                _ if project_key == BREAK_PROJECT_KEY => ProjectKind::SpecialBreak,
+                Some(_) => ProjectKind::Configured,
+                _ => ProjectKind::AdHoc,
+            };
+            let project_info = JsonProject {
+                internal_name,
+                kind,
             };
             (project_key, project_info)
         })
@@ -230,7 +241,7 @@ mod tests {
     fn test_generate_json_content_pause_conversion() {
         setup_test_config();
 
-        let items = vec![create_test_item(12, 5, 50, "Pau", "", "lunch break")];
+        let items = vec![create_test_item(12, 5, 50, "x", "", "lunch break")];
 
         let day = date!(2025 - 09 - 22);
         let json_content = generate_json_content(&items, day).unwrap();
@@ -238,7 +249,7 @@ mod tests {
         let json_value: serde_json::Value = serde_json::from_str(&json_content).unwrap();
         let entries = json_value["entries"].as_array().unwrap();
 
-        assert_eq!(entries[0]["project_key"], "Pause");
+        assert_eq!(entries[0]["project_key"], "x");
         assert!(entries[0]["ticket"].is_null());
     }
 

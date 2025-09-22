@@ -4,7 +4,7 @@ use chrono::{NaiveTime, Timelike};
 use color_eyre::{Result, eyre::Context};
 use csv::WriterBuilder;
 
-use crate::components::home::state::TimeItem;
+use crate::{components::home::state::TimeItem, shared::BREAK_PROJECT_KEY};
 
 use super::get_project_key;
 
@@ -76,8 +76,8 @@ fn write_csv_record<W: Write>(
     let duration_hours = duration_secs as f64 / 3600.0;
     let duration_formatted = format_duration_hms(duration_secs);
 
-    // Convert "Pau" to "Pause" for better readability
-    let display_project = if project_key == "Pau" {
+    // legacy consistency
+    let display_project = if project_key == BREAK_PROJECT_KEY {
         "Pause"
     } else {
         project_key
@@ -221,7 +221,7 @@ mod tests {
     fn test_generate_csv_content_pause_conversion() {
         setup_test_config();
 
-        let items = vec![create_test_item(12, 5, 50, "Pau", "", "lunch break")];
+        let items = vec![create_test_item(12, 5, 50, "x", "", "lunch break")];
 
         let mut output = Vec::new();
         generate_csv_content(&items, &mut output).unwrap();
@@ -229,9 +229,8 @@ mod tests {
         let csv_string = String::from_utf8(output).unwrap();
         let lines: Vec<&str> = csv_string.lines().collect();
 
-        // Check that "Pau" is converted to "Pause"
         assert!(lines[1].contains("Pause"));
-        assert!(!lines[1].contains("Pau,"));
+        assert!(!lines[1].contains("x,"));
     }
 
     #[test]

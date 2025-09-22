@@ -8,7 +8,7 @@ use ratatui::{
 };
 use time::{Date, Duration, OffsetDateTime, Weekday, ext::NumericalDuration};
 
-use crate::components::calendar::TimesheetSummary;
+use crate::{components::calendar::TimesheetSummary, shared::BREAK_PROJECT_KEY};
 
 pub struct TimesheetSummaryPanel<'a> {
     summary: &'a TimesheetSummary,
@@ -83,7 +83,7 @@ impl<'a> TimesheetSummaryPanel<'a> {
             .projects
             .iter()
             .filter(|(_, project_summary)| {
-                project_summary.internal_name.as_deref() != Some("Pause")
+                project_summary.internal_name.as_deref() != Some(BREAK_PROJECT_KEY)
             })
             .flat_map(|(_, project_summary)| project_summary.ticket_sums.values())
             .sum()

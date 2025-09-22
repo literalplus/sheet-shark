@@ -136,6 +136,13 @@ impl HomeState {
         self.table.selected().and_then(|idx| self.items.get(idx))
     }
 
+    pub fn maybe_selected_item_mut(&mut self) -> Option<&mut TimeItem> {
+        let idx = self.table.selected().unwrap_or(0);
+        let item = self.items.get_mut(idx)?;
+        item.version.touch();
+        Some(item)
+    }
+
     pub fn expect_selected_item_mut(&mut self) -> &mut TimeItem {
         let idx = self.table.selected().unwrap_or(0);
         let item = self.items.get_mut(idx).expect("the selected item to exist");

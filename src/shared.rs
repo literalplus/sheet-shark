@@ -1,5 +1,7 @@
 use tracing::warn;
 
+pub const BREAK_PROJECT_KEY: &str = "x";
+
 /// Simple local version tracker for saving with a single actor.
 ///
 /// This does not assume that the remote stores version numbers and is suitable

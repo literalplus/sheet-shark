@@ -5,6 +5,7 @@ use crate::{
     action::{Action, Page},
     components::home::{EDITING_KEYS, Home, SELECTING_KEYS, editing::EditMode, state::TimeItem},
     persist::{self, Command},
+    shared::BREAK_PROJECT_KEY,
 };
 
 #[derive(PartialEq, Eq)]
@@ -22,6 +23,7 @@ pub enum HomeAction {
     MergeItemDown(usize),
     SuggestTickets(String),
     Export,
+    ToggleBreak,
 }
 
 impl From<ErrReport> for HomeAction {
@@ -133,6 +135,17 @@ fn do_perform(home: &mut Home, action: HomeAction) -> Result<Vec<Action>> {
                 Ok(()) => Action::SetStatusLine("✅ Exported to CSV and JSON".into()),
                 Err(e) => Action::SetStatusLine(format!("❌ Export failed: {e}")),
             }
+        }
+        HomeAction::ToggleBreak => {
+            if let Some(item) = home.state.maybe_selected_item_mut() {
+                item.project = if item.project == BREAK_PROJECT_KEY {
+                    ""
+                } else {
+                    "x"
+                }
+                .into();
+            }
+            return Ok(vec![]);
         }
         HomeAction::None => return Ok(vec![]),
     };
