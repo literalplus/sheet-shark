@@ -19,6 +19,8 @@ struct JsonExport {
 struct JsonMeta {
     day: String,
     exported_at: String,
+    start_time: Option<String>,
+    end_time: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -51,6 +53,12 @@ pub fn generate_json_content(items: &[TimeItem], day: Date) -> Result<String> {
     let meta = JsonMeta {
         day: day.to_string(),
         exported_at: chrono::Utc::now().to_rfc3339(),
+        start_time: items
+            .first()
+            .map(|it| it.start_time.format("%H:%M").to_string()),
+        end_time: items
+            .last()
+            .map(|it| it.start_time.format("%H:%M").to_string()),
     };
 
     let used_projects: std::collections::HashSet<String> = items

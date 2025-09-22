@@ -72,12 +72,9 @@ impl Component for Calendar {
             }
             KeyCode::Char('e') => {
                 if let Some(summary) = &self.summary {
-                    match export::export_to_jira(self.day, summary) {
-                        Ok(count) => Ok(Some(Action::SetStatusLine(format!(
-                            "Opened {} Jira URLs",
-                            count
-                        )))),
-                        Err(e) => Ok(Some(Action::SetStatusLine(format!("Export failed: {}", e)))),
+                    match export::export(self.day, summary) {
+                        Ok(()) => Ok(Some(Action::SetStatusLine("Exported!".into()))),
+                        Err(e) => Ok(Some(Action::SetStatusLine(format!("Export failed: {e}")))),
                     }
                 } else {
                     Ok(Some(Action::SetStatusLine(
