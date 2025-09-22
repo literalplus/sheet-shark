@@ -1,6 +1,6 @@
 {
     "default_project_key": "__dummy",
-    "project": {
+    "projects": {
         "__dummy": {
             "internal_name": "Dummy project if nothing is configured"
         }
