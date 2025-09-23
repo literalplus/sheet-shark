@@ -1,4 +1,4 @@
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     style::{Modifier, Style, Stylize, palette::tailwind},
     text::Text,
@@ -29,6 +29,23 @@ impl EditModeBehavior for Description {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
         if self.buf.should_save(key) {
             state.expect_selected_item_mut().description = self.buf.to_owned();
+        }
+        if key.code == KeyCode::Right {
+            // UX feature: Since duration of this entry and time of the next entry represent the same information,
+            // we skip the duration. It's usually more ergonomic to enter the time explicitly. If the user wants
+            // to enter a duration instead, they can move left again. That use-case is also why this feature is
+            // NOT implemented in the opposite direction.
+            let in_last_row = state.is_last_row_selected();
+            if in_last_row {
+                let new_item = TimeItem::new(
+                    Default::default(),
+                    state.expect_selected_item().next_start_time(),
+                );
+                state.items.push(new_item);
+            }
+            state.table.select_next();
+            state.table.select_column(Some(0));
+            return HomeAction::None;
         }
         self.buf.handle_key_event(state, key)
     }

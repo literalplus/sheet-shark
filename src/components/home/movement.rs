@@ -1,6 +1,6 @@
 use crossterm::event::{KeyCode, KeyEvent};
 
-use crate::components::home::state::{HomeState, TIME_ITEM_WIDTH};
+use crate::components::home::state::HomeState;
 
 pub fn is_movement(key: KeyEvent) -> bool {
     matches!(
@@ -64,18 +64,6 @@ fn select_next_column(state: &mut HomeState) -> bool {
 
     let in_last_row = state.is_last_row_selected();
     let in_last_column = state.is_last_column_selected();
-    let in_penultimate_column = state.table.selected_column() == Some(TIME_ITEM_WIDTH - 2);
-
-    // UX feature: Since duration of this entry and time of the next entry represent the same information,
-    // we skip the duration. It's usually more ergonomic to enter the time explicitly. If the user wants
-    // to enter a duration instead, they can move left again. That use-case is also why this feature is
-    // NOT implemented in the opposite direction.
-    let should_skip_duration = in_penultimate_column && !in_last_row;
-    if should_skip_duration {
-        state.table.select_first_column();
-        state.table.select_next();
-        return true;
-    }
 
     let want_wrap = in_last_column;
     if want_wrap {
