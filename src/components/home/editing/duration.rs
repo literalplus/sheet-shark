@@ -141,7 +141,7 @@ impl EditModeBehavior for Duration {
             return err.into();
         }
 
-        if key.code == KeyCode::Right {
+        if key.code == KeyCode::Right || key.code == KeyCode::Tab {
             return self.move_to_next_row_maybe_create(state);
         }
 
