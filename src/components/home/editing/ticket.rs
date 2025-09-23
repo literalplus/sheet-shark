@@ -117,7 +117,11 @@ impl TicketsSuggestion {
         if query != self.query {
             return; // outdated result, new query in flight
         }
+        let no_suggestions_before = self.suggestions.is_empty();
         self.suggestions = suggestions;
+        if no_suggestions_before && !self.suggestions.is_empty() {
+            self.list_state.select_first();
+        }
     }
 
     pub fn selected(&self) -> Option<&str> {
