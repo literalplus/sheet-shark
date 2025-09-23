@@ -100,6 +100,7 @@ impl Time {
             .items
             .get_mut(my_index - 1)
             .expect("previous item to exist");
+        previous_item.version.touch();
 
         let time_delta = my_next_time - my_previous_time; // signed as opposed to Duration
         let duration_unsigned = Duration::from_secs(time_delta.num_seconds().unsigned_abs());
