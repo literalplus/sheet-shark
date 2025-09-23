@@ -3,6 +3,6 @@ Type=Application
 Name=Sheet Shark 🦈
 Comment=Funny CLI fish that helps with timesheets
 Encording=UTF-8
-Exec=sheet-shark
+Exec=HOME/.cargo/bin/sheet-shark
 Terminal=true
 Icon=sheet-shark
