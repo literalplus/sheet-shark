@@ -149,7 +149,7 @@ impl EditModeBehavior for Duration {
     }
 
     fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
-        let mut cells = item.as_cells().clone();
+        let mut cells = item.as_cells(false).clone();
         let mut content = self.buf.to_owned();
         if content.is_empty() {
             content = "...".into();

@@ -60,7 +60,7 @@ impl EditModeBehavior for Ticket {
     }
 
     fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
-        let mut cells = item.as_cells().clone();
+        let mut cells = item.as_cells(false).clone();
         cells[2] = Text::from(self.buf.to_owned());
         Row::new(cells)
     }

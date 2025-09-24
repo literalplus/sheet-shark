@@ -5,6 +5,8 @@ use chrono::NaiveTime;
 use color_eyre::eyre::Context;
 use educe::Educe;
 use humantime::format_duration;
+use ratatui::style::Style;
+use ratatui::style::palette::tailwind;
 use ratatui::{
     text::Text,
     widgets::{Row, TableState},
@@ -92,23 +94,28 @@ impl TryFrom<&persist::TimeEntry> for TimeItem {
 pub const TIME_ITEM_WIDTH: usize = 5;
 
 impl TimeItem {
-    pub fn as_row<'a>(&'a self) -> Row<'a> {
-        Row::new(self.as_cells())
+    pub fn as_row<'a>(&'a self, mark_as_mismatch: bool) -> Row<'a> {
+        Row::new(self.as_cells(mark_as_mismatch))
     }
 
     /// Needed because ratatui's Row doesn't expose its contents
-    pub fn as_cells<'a>(&'a self) -> [Text<'a>; TIME_ITEM_WIDTH] {
+    pub fn as_cells<'a>(&'a self, mark_as_mismatch: bool) -> [Text<'a>; TIME_ITEM_WIDTH] {
         let formatted_duration = if self.duration.is_zero() {
             "".to_string()
         } else {
             format!("{}", format_duration(self.duration))
+        };
+        let duration_style = if mark_as_mismatch {
+            Style::default().bg(tailwind::ROSE.c500)
+        } else {
+            Style::default()
         };
         [
             Text::from(self.start_time.format("%H:%M").to_string()),
             Text::from(&self.project as &str),
             Text::from(&self.ticket as &str),
             Text::from(&self.description as &str),
-            Text::from(formatted_duration),
+            Text::from(formatted_duration).style(duration_style),
         ]
     }
 

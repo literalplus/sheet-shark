@@ -62,10 +62,11 @@ fn draw_table<'a>(
     selected_idx: Option<usize>,
     edit_mode: &Option<EditMode>,
 ) -> Table<'a> {
+    let mismatching_idxs = mark_mismatching_items(items);
     let rows = items
         .iter()
         .enumerate()
-        .map(draw_item(selected_idx, edit_mode));
+        .map(draw_item(selected_idx, edit_mode, &mismatching_idxs));
 
     let header = TABLE_HEADERS
         .into_iter()
@@ -92,24 +93,25 @@ fn draw_table<'a>(
 fn draw_item(
     selected_idx: Option<usize>,
     edit_mode: &Option<EditMode>,
+    mismatching_idxs: &[usize],
 ) -> impl Fn((usize, &TimeItem)) -> Row {
     move |(i, item)| -> Row {
         let is_selected = Some(i) == selected_idx;
         if is_selected && let Some(edit_mode) = edit_mode {
             edit_mode.style_selected_item(item)
         } else {
-            create_row_for_item(i, item)
+            create_row_for_item(i, item, mismatching_idxs.contains(&i))
         }
     }
 }
 
-fn create_row_for_item(i: usize, item: &TimeItem) -> Row<'_> {
+fn create_row_for_item(i: usize, item: &TimeItem, is_mismatch: bool) -> Row<'_> {
     if item.project == BREAK_PROJECT_KEY {
-        let mut cells = item.as_cells();
+        let mut cells = item.as_cells(is_mismatch);
         cells[2] = "🏖️🏖️🏖️".into();
         Row::new(cells).bg(tailwind::EMERALD.c900)
     } else {
-        zebra_stripe(i, item.as_row())
+        zebra_stripe(i, item.as_row(is_mismatch))
     }
 }
 
@@ -119,6 +121,25 @@ fn zebra_stripe(i: usize, row: Row) -> Row {
         _ => tailwind::SLATE.c900,
     };
     row.style(Style::new().bg(alternating_color))
+}
+
+pub fn mark_mismatching_items(items: &[TimeItem]) -> Vec<usize> {
+    let mut mismatching_indices = Vec::new();
+
+    for (i, current_item) in items.iter().enumerate() {
+        let Some(next_item) = items.get(i + 1) else {
+            break;
+        };
+
+        let expected_next_start_time = current_item.next_start_time();
+        let actual_next_start_time = next_item.start_time;
+
+        if expected_next_start_time != actual_next_start_time {
+            mismatching_indices.push(i);
+        }
+    }
+
+    mismatching_indices
 }
 
 const TITLE_FORMAT: &[FormatItem<'static>] =
