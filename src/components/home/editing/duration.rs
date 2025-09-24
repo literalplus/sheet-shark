@@ -135,14 +135,14 @@ impl Duration {
 
 impl EditModeBehavior for Duration {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
+        if key.code == KeyCode::Right || key.code == KeyCode::Tab {
+            return self.move_to_next_row_maybe_create(state);
+        }
+
         if self.buf.should_save(key)
             && let Err(err) = self.handle_save(state)
         {
             return err.into();
-        }
-
-        if key.code == KeyCode::Right || key.code == KeyCode::Tab {
-            return self.move_to_next_row_maybe_create(state);
         }
 
         self.buf.handle_key_event(state, key)
