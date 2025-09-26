@@ -57,7 +57,20 @@ impl<'a> TimesheetSummaryPanel<'a> {
         let project_display = self.format_project_display(project_key, project_summary);
         let duration_display = self.format_duration_display(duration);
 
-        Row::new(vec![project_display, ticket.to_string(), duration_display])
+        // Check if project has jira_url set and ticket is "-"
+        let ticket_display = if ticket == "-"
+            && project_summary
+                .config
+                .as_ref()
+                .and_then(|c| c.jira_url.as_ref())
+                .is_some()
+        {
+            "‼️ no ticket ‼️".to_string()
+        } else {
+            ticket.to_string()
+        };
+
+        Row::new(vec![project_display, ticket_display, duration_display])
     }
 
     fn format_project_display(
