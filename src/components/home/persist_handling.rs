@@ -32,9 +32,13 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             home.state = into_state(timesheet, entries);
             if home.state.items.is_empty() {
                 // Without an initial item it's not possible to add one
-                home.state
-                    .items
-                    .push(TimeItem::new(Duration::ZERO, NaiveTime::MIN));
+                let mut item = TimeItem::new(Duration::ZERO, NaiveTime::MIN);
+                item.version.mark_sent();
+                home.send_persist(persist::Command::StoreEntry {
+                    entry: item.to_persist(&day),
+                    version: item.version.local,
+                });
+                home.state.items.push(item);
             }
             HomeAction::SetStatusLine(format!("Loaded: {day}"))
         }

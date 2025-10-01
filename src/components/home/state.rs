@@ -16,6 +16,7 @@ use crate::config::Config;
 use crate::persist::{self, TimeEntryId, Timesheet};
 use crate::shared::DataVersion;
 
+#[derive(Debug)]
 pub struct TimeItem {
     pub id: TimeEntryId,
     pub start_time: NaiveTime,

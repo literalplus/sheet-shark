@@ -4,6 +4,7 @@ use ratatui::{
     text::Text,
     widgets::{Row, Table},
 };
+use tracing::info;
 
 use super::EditModeBehavior;
 use crate::components::home::{
@@ -25,12 +26,15 @@ impl Description {
     }
 
     fn do_save(&mut self, state: &mut HomeState) {
-        state.expect_selected_item_mut().description = self.buf.to_owned();
+        let item = state.expect_selected_item_mut();
+        item.description = self.buf.to_owned();
+        info!("Description saved ?! {item:?}");
     }
 }
 
 impl EditModeBehavior for Description {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
+        info!("Description key: {key:?}");
         if self.buf.should_save(key) {
             self.do_save(state);
         }

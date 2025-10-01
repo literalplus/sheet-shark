@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use chrono::TimeDelta;
 use color_eyre::eyre::{Result, bail, eyre};
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyEvent;
 use humantime::parse_duration;
 use ratatui::{
     style::{Modifier, Style, Stylize, palette::tailwind},
@@ -13,7 +13,7 @@ use ratatui::{
 use super::EditModeBehavior;
 use crate::components::home::{
     action::HomeAction,
-    editing::{EditMode, shared::BufEditBehavior},
+    editing::shared::BufEditBehavior,
     state::{HomeState, TimeItem},
 };
 
@@ -61,8 +61,6 @@ impl Duration {
             state.expect_selected_item().next_start_time(),
         );
         state.items.push(new_item);
-        state.table.select_last();
-        state.table.select_first_column();
     }
 
     fn adjust_following_items(state: &mut HomeState) {
@@ -109,36 +107,10 @@ impl Duration {
             state.drain_items(drain_start..(drain_start + num_items_to_remove));
         }
     }
-
-    fn move_to_next_row_maybe_create(&mut self, state: &mut HomeState) -> HomeAction {
-        // UX feature: In the last row we add a new item when moving right, also if
-        // no duration has been entered yet (start time of next row will fix it)
-
-        if let Err(err) = self.handle_save(state) {
-            return err.into();
-        }
-
-        let in_last_row = state.is_last_row_selected();
-        if in_last_row {
-            let new_item = TimeItem::new(
-                Default::default(),
-                state.expect_selected_item().next_start_time(),
-            );
-            state.items.push(new_item);
-        }
-
-        state.table.select_next();
-        state.table.select_column(Some(0));
-        HomeAction::EnterEditSpecific(Some(EditMode::of_time()))
-    }
 }
 
 impl EditModeBehavior for Duration {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction {
-        if key.code == KeyCode::Right || key.code == KeyCode::Tab {
-            return self.move_to_next_row_maybe_create(state);
-        }
-
         if self.buf.should_save(key)
             && let Err(err) = self.handle_save(state)
         {

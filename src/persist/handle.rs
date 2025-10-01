@@ -12,7 +12,7 @@ use time::{
     Date, OffsetDateTime, ext::NumericalDuration, format_description::FormatItem,
     macros::format_description,
 };
-use tracing::warn;
+use tracing::{info, warn};
 
 use crate::persist::{
     Command, Event, TimeEntry, TimeEntryId, Timesheet,
@@ -34,9 +34,17 @@ pub(super) async fn handle(conn: &mut SqliteConnection, cmd: Command) -> Result<
 
 async fn store_entry(conn: &mut SqliteConnection, entry: TimeEntry, version: i32) -> Result<Event> {
     if entry.is_empty_default() {
+        let deleted_rowcount = diesel::delete(time_entry::table)
+            .filter(time_entry::id.eq(&entry.id))
+            .execute(conn)?;
+        if deleted_rowcount > 0 {
+            info!("Deleted entry that now matches the empty default: {entry:?}");
+        } else {
+            info!("Not storing entry that is the empty default");
+        }
         return Ok(Event::EntryStored {
             id: TimeEntryId::from_str(&entry.id)?,
-            version: -1,
+            version,
         });
     }
     ensure_timesheet_exists(conn, &entry.timesheet_day).await?;
