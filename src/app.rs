@@ -120,7 +120,7 @@ impl App {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-        let action = if key.code == KeyCode::Char('q') || (ctrl && key.code == KeyCode::Char('c')) {
+        let action = if ctrl && (key.code == KeyCode::Char('c') || key.code == KeyCode::Char('d')) {
             Action::Quit
         } else if ctrl && key.code == KeyCode::Char('z') {
             Action::Suspend
