@@ -120,4 +120,13 @@ impl TimesheetSummary {
             .flat_map(|(_, project_summary)| project_summary.ticket_sums.values())
             .sum()
     }
+
+    pub fn calculate_break_duration(&self) -> Duration {
+        self.projects
+            .get(BREAK_PROJECT_KEY)
+            .map(|project_summary| {
+                project_summary.ticket_sums.values().sum()
+            })
+            .unwrap_or(Duration::ZERO)
+    }
 }

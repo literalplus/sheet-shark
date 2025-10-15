@@ -36,6 +36,7 @@ impl<'a> TimesheetSummaryPanel<'a> {
         self.summary
             .projects
             .iter()
+            .filter(|(project_key, _)| *project_key != BREAK_PROJECT_KEY) // Filter out break entries
             .flat_map(|(project_key, project_summary)| {
                 project_summary
                     .ticket_sums
@@ -99,6 +100,8 @@ impl<'a> TimesheetSummaryPanel<'a> {
 
     fn create_total_paragraph(&self, total_duration: Duration) -> Paragraph<'_> {
         let formatted_duration = self.format_duration_display(&total_duration);
+        let break_duration = self.summary.calculate_break_duration();
+        let formatted_break_duration = self.format_duration_display(&break_duration);
 
         let mut text = String::new();
 
@@ -107,7 +110,7 @@ impl<'a> TimesheetSummaryPanel<'a> {
             text.push_str(&format!("{} - {} | ", start, end));
         }
 
-        text.push_str(&format!("Working time: {}", formatted_duration));
+        text.push_str(&format!("Working time: {} | Break: {}", formatted_duration, formatted_break_duration));
 
         Paragraph::new(text)
             .style(Style::new().italic())
