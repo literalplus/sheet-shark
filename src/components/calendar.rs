@@ -13,8 +13,8 @@ use super::Component;
 use crate::{
     action::{Action, Page, RelevantKey},
     layout::LayoutSlot,
-    persist::{self, Command, Event},
-    shared::summary::TimesheetSummary,
+    persist::{self, Command, Event, TimeEntry},
+    shared::summary::{SummaryJson, TimesheetSummary},
 };
 
 mod widgets;
@@ -35,6 +35,7 @@ pub struct Calendar {
     day: Date,
     days_with_timesheets: Vec<Date>,
     summary: Option<TimesheetSummary>,
+    entries: Vec<TimeEntry>,
 }
 
 impl Component for Calendar {
@@ -62,12 +63,17 @@ impl Component for Calendar {
             _ if self.handle_day_movement(key) => Ok(None),
             KeyCode::Enter => Ok(Some(Action::SetActivePage(Page::Home { day: self.day }))),
             KeyCode::Char('c') => {
-                let json =
-                    serde_json::to_string(&self.summary).context("seralizing timesheet summary")?;
-                let mut clip = CLIPBOARD.lock().expect("clipboard mutex not poisoned");
-                match clip.set_contents(json) {
-                    Ok(_) => Ok(Some(Action::SetStatusLine("Summary copied!".into()))),
-                    Err(_) => Ok(Some(Action::SetStatusLine("Failed to copy".into()))),
+                if let Some(_summary) = &self.summary {
+                    let summary_json = SummaryJson::from_entries(self.entries.clone());
+                    let json = serde_json::to_string(&summary_json)
+                        .context("serializing timesheet summary")?;
+                    let mut clip = CLIPBOARD.lock().expect("clipboard mutex not poisoned");
+                    match clip.set_contents(json) {
+                        Ok(_) => Ok(Some(Action::SetStatusLine("Summary copied!".into()))),
+                        Err(_) => Ok(Some(Action::SetStatusLine("Failed to copy".into()))),
+                    }
+                } else {
+                    Ok(Some(Action::SetStatusLine("No summary available".into())))
                 }
             }
             KeyCode::Char('e') => {
@@ -138,6 +144,7 @@ impl Component for Calendar {
                 timesheet: _,
                 entries,
             } if day == self.day => {
+                self.entries = entries.clone();
                 self.summary = Some(TimesheetSummary::new(entries));
             }
             _ => {}

@@ -1,5 +1,6 @@
 use tracing::warn;
 
+pub mod defrag;
 pub mod summary;
 
 pub const BREAK_PROJECT_KEY: &str = "x";
