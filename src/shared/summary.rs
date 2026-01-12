@@ -161,10 +161,10 @@ impl TimesheetSummary {
     }
 
     pub fn calculate_break_duration(&self) -> Duration {
-        self.projects
-            .get(BREAK_PROJECT_KEY)
-            .map(|project_summary| project_summary.ticket_sums.values().sum())
-            .unwrap_or(Duration::ZERO)
+        self.breaks
+            .iter()
+            .map(|b| Duration::minutes(b.duration_mins as i64))
+            .sum()
     }
 }
 

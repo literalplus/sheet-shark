@@ -110,7 +110,10 @@ impl<'a> TimesheetSummaryPanel<'a> {
             text.push_str(&format!("{} - {} | ", start, end));
         }
 
-        text.push_str(&format!("Working time: {} | Break: {}", formatted_duration, formatted_break_duration));
+        text.push_str(&format!(
+            "Working time: {} | Break: {}",
+            formatted_duration, formatted_break_duration
+        ));
 
         Paragraph::new(text)
             .style(Style::new().italic())
