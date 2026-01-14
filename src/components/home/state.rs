@@ -14,7 +14,7 @@ use ratatui::{
 
 use crate::config::Config;
 use crate::persist::{self, TimeEntryId, Timesheet};
-use crate::shared::DataVersion;
+use crate::shared::{BREAK_PROJECT_KEY, DataVersion};
 
 #[derive(Debug)]
 pub struct TimeItem {
@@ -111,9 +111,23 @@ impl TimeItem {
         } else {
             Style::default()
         };
+
+        // TODO - separate this data access into a view model or sth
+        let project_key = if self.project.is_empty() {
+            &Config::get().default_project_key
+        } else {
+            &self.project
+        };
+        let is_project_configured = project_key == BREAK_PROJECT_KEY || Config::get().projects.contains_key(project_key);
+        let project_style = if !is_project_configured && !self.project.is_empty() {
+            Style::default().fg(tailwind::RED.c500)
+        } else {
+            Style::default()
+        };
+
         [
             Text::from(self.start_time.format("%H:%M").to_string()),
-            Text::from(&self.project as &str),
+            Text::from(&self.project as &str).style(project_style),
             Text::from(&self.ticket as &str),
             Text::from(&self.description as &str),
             Text::from(formatted_duration).style(duration_style),
