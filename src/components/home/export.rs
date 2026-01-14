@@ -48,7 +48,7 @@ fn build_export_file_path(day: Date, extension: &str) -> Result<PathBuf> {
 
 pub(super) fn get_project_key(project: &str) -> String {
     if project.is_empty() {
-        Config::get().default_project_key.clone()
+        Config::get_quick().default_project_key.clone()
     } else {
         project.to_string()
     }

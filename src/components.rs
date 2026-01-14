@@ -6,7 +6,7 @@ use ratatui::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{action::Action, config::Config, persist, tui::Event};
+use crate::{action::Action, persist, tui::Event};
 
 pub mod calendar;
 pub mod fps;
@@ -24,10 +24,6 @@ pub trait Component {
     }
     /// Register a command handler that can be used to communicate with the persistence layer.
     fn register_persist_handler(&mut self, _tx: UnboundedSender<persist::Command>) -> Result<()> {
-        Ok(())
-    }
-    /// Register a configuration handler that provides configuration settings if necessary.
-    fn register_config_handler(&mut self, _config: Config) -> Result<()> {
         Ok(())
     }
     /// Initialize the component with a specified area if necessary.

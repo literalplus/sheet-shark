@@ -1,7 +1,8 @@
 #![allow(dead_code)] // Remove this once you start using the code
 
-use std::{collections::HashMap, env, path::PathBuf, sync::OnceLock};
+use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
 
+use arc_swap::{ArcSwap, Guard};
 use color_eyre::Result;
 use config::{Environment, File};
 use directories::ProjectDirs;
@@ -9,6 +10,11 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
 const DEFAULT_CONFIG: &str = include_str!("../.config/config.json5");
+
+lazy_static! {
+    static ref CONFIG: ArcSwap<Config> =
+        ArcSwap::from_pointee(Config::load().expect("load initial config"));
+}
 
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct AppConfig {
@@ -45,10 +51,8 @@ lazy_static! {
             .map(PathBuf::from);
 }
 
-static CONFIG: OnceLock<Config> = OnceLock::new();
-
 impl Config {
-    pub fn new() -> Result<Self, config::ConfigError> {
+    fn load() -> Result<Self, config::ConfigError> {
         let data_dir = get_data_dir();
         let config_dir = get_config_dir();
 
@@ -75,18 +79,28 @@ impl Config {
             .build()?
             .try_deserialize()?;
 
-        CONFIG.set(cfg.clone()).expect("no config set yet");
-
         Ok(cfg)
     }
 
-    pub fn get() -> &'static Self {
-        CONFIG.get().expect("config loaded")
+    /// Obtain a long-term borrow of the config, e.g. for sharing across async barriers
+    pub fn get_longterm() -> Arc<Self> {
+        CONFIG.load_full()
+    }
+
+    /// Obtain a short-term borrow of the config
+    pub fn get_quick() -> Guard<Arc<Self>> {
+        CONFIG.load()
+    }
+
+    pub fn reload() -> Result<(), config::ConfigError> {
+        let cfg = Self::load()?;
+        CONFIG.store(Arc::new(cfg));
+        Ok(())
     }
 
     #[cfg(test)]
     pub fn set_for_tests(config: Config) {
-        let _ = CONFIG.set(config);
+        CONFIG.store(Arc::new(config));
     }
 }
 

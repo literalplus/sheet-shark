@@ -102,18 +102,23 @@ impl Component for Calendar {
             }
             KeyCode::Char('F') => {
                 let config_dir = crate::config::get_config_dir();
+                let config_file = config_dir.join("config.yaml");
                 match std::process::Command::new("xdg-open")
-                    .arg(&config_dir)
+                    .arg(&config_file)
                     .spawn()
                 {
-                    Ok(_) => Ok(Some(Action::SetStatusLine(
-                        "Opened config directory".into(),
-                    ))),
+                    Ok(_) => Ok(Some(Action::SetStatusLine("Opened config file".into()))),
                     Err(e) => Ok(Some(Action::SetStatusLine(format!(
-                        "Failed to open directory: {e}"
+                        "Failed to open config file: {e}"
                     )))),
                 }
             }
+            KeyCode::Char('r') => match crate::config::Config::reload() {
+                Ok(_) => Ok(Some(Action::SetStatusLine("Config reloaded!".into()))),
+                Err(e) => Ok(Some(Action::SetStatusLine(format!(
+                    "Failed to reload config: {e}"
+                )))),
+            },
             _ => Ok(None),
         }
     }

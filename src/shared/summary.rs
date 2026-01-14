@@ -51,7 +51,7 @@ pub struct SummaryJson {
 
 impl TimesheetSummary {
     pub fn new(entries: Vec<TimeEntry>) -> Self {
-        let config = Config::get();
+        let config = Config::get_quick();
         let mut projects: HashMap<String, ProjectSummary> = HashMap::new();
 
         let mut start_time: Option<String> = None;
@@ -78,7 +78,7 @@ impl TimesheetSummary {
 
             let project_summary = projects
                 .entry(project_key.clone())
-                .or_insert_with(|| Self::create_project_summary(project_key, config));
+                .or_insert_with(|| Self::create_project_summary(project_key, &config));
 
             // Track the earliest start time for this project
             if let Some(current_first) = &project_summary.first_start {

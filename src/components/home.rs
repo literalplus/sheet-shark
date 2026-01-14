@@ -15,7 +15,6 @@ use crate::{
         editing::{EditMode, EditModeBehavior},
         state::HomeState,
     },
-    config::Config,
     persist,
     shared::BREAK_PROJECT_KEY,
 };
@@ -37,7 +36,6 @@ pub struct Home {
             .expect("find local offset for date")
             .date()))]
     day: Date,
-    config: Config,
     action_tx: Option<UnboundedSender<Action>>,
     persist_tx: Option<UnboundedSender<persist::Command>>,
 
@@ -77,11 +75,6 @@ impl Home {
 }
 
 impl Component for Home {
-    fn register_config_handler(&mut self, config: Config) -> Result<()> {
-        self.config = config;
-        Ok(())
-    }
-
     fn register_persist_handler(&mut self, tx: UnboundedSender<persist::Command>) -> Result<()> {
         self.persist_tx = Some(tx);
         Ok(())

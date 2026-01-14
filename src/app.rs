@@ -9,13 +9,11 @@ use crate::{
     components::{
         Component, calendar::Calendar, fps::FpsCounter, home::Home, statusbar::StatusBar,
     },
-    config::Config,
     persist,
     tui::{Event, Tui},
 };
 
 pub struct App {
-    config: Config,
     tick_rate: f64,
     frame_rate: f64,
     components: Vec<Box<dyn Component>>,
@@ -46,7 +44,6 @@ impl App {
             ],
             should_quit: false,
             should_suspend: false,
-            config: Config::new()?,
             action_tx,
             action_rx,
             persist_tx,
@@ -63,9 +60,6 @@ impl App {
 
         for component in self.components.iter_mut() {
             component.register_action_handler(self.action_tx.clone())?;
-        }
-        for component in self.components.iter_mut() {
-            component.register_config_handler(self.config.clone())?;
         }
         for component in self.components.iter_mut() {
             component.register_persist_handler(self.persist_tx.clone())?;

@@ -51,6 +51,7 @@ time = { version = "0.3.44", features = ["local-offset", "formatting", "parsing"
 educe = "0.6.0"
 itertools = "0.14.0"
 copypasta = "0.10.2"
+arc-swap = "1.8.0"
 
 
 [build-dependencies]

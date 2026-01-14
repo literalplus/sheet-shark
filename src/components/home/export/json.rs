@@ -48,7 +48,7 @@ struct JsonEntry {
 }
 
 pub fn generate_json_content(items: &[TimeItem], day: Date) -> Result<String> {
-    let config = Config::get();
+    let config = Config::get_quick();
 
     let meta = JsonMeta {
         day: day.to_string(),
