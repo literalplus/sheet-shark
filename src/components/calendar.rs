@@ -88,7 +88,7 @@ impl Component for Calendar {
                     )))
                 }
             }
-            KeyCode::Char('f') => {
+            KeyCode::Char('F') => {
                 let data_dir = crate::config::get_data_dir();
                 match std::process::Command::new("xdg-open")
                     .arg(&data_dir)
@@ -100,7 +100,7 @@ impl Component for Calendar {
                     )))),
                 }
             }
-            KeyCode::Char('F') => {
+            KeyCode::Char('f') => {
                 let config_dir = crate::config::get_config_dir();
                 let config_file = config_dir.join("config.yaml");
                 match std::process::Command::new("xdg-open")
