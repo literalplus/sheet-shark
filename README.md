@@ -23,6 +23,12 @@ You can then run via the `sheet-shark` application added to your launcher
 (or manually with `gtk-launch sheet-shark`)
 (or from the terminal with `sheet-shark`).
 
+Developing on NixOS, needed due to sqlite LD dependency on diesel:
+
+```bash
+nix-shell # sadly
+```
+
 ## Configuration
 
 You can open the config directory in the calendar view by pressing `Shift+F`.

@@ -2,7 +2,7 @@
 name         = "sheet-shark"
 version      = "0.1.0"
 edition      = "2024"
-description  = " Funny CLI fish to help with timesheets "
+description  = "Funny CLI fish to help with timesheets"
 authors      = ["Philipp Nowak <sheet-shark@lit.plus>"]
 build        = "build.rs"
 repository   = "https://github.com/literalplus/sheet-shark"

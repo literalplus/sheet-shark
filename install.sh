@@ -7,7 +7,8 @@ ICON_FILES=$HOME/.local/share/icons/hicolor
 CONFIG_DIR=$HOME/.config/sheet-shark
 
 mkdir -v -p $DESKTOP_FILES
-mkdir -v -p $ICON_FILES
+mkdir -v -p $ICON_FILES/48x48/apps
+mkdir -v -p $ICON_FILES/512x512/apps
 mkdir -v -p $CONFIG_DIR
 
 cat install/sheet-shark.desktop | sed "s@HOME@$HOME@" > $DESKTOP_FILES/sheet-shark.desktop
