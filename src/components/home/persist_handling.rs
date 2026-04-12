@@ -17,7 +17,7 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             for entry in home.state.items.iter_mut() {
                 if entry.id == id {
                     entry.version.notify_saved(version);
-                    return HomeAction::SetStatusLine(format!("Stored: {id} v{version}"));
+                    return HomeAction::SetStatusLine(format!("Stored: {id} v{version}")) + HomeAction::Export;
                 }
             }
             HomeAction::None
@@ -33,11 +33,6 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             if home.state.items.is_empty() {
                 // Without an initial item it's not possible to add one
                 let mut item = TimeItem::new(Duration::ZERO, NaiveTime::MIN);
-                item.version.mark_sent();
-                home.send_persist(persist::Command::StoreEntry {
-                    entry: item.to_persist(&day),
-                    version: item.version.local,
-                });
                 home.state.items.push(item);
             }
             HomeAction::SetStatusLine(format!("Loaded: {day}"))
