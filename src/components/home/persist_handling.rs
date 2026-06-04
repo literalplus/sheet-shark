@@ -17,7 +17,8 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             for entry in home.state.items.iter_mut() {
                 if entry.id == id {
                     entry.version.notify_saved(version);
-                    return HomeAction::SetStatusLine(format!("Stored: {id} v{version}")) + HomeAction::Export;
+                    return HomeAction::SetStatusLine(format!("Stored: {id} v{version}"))
+                        + HomeAction::Export;
                 }
             }
             HomeAction::None

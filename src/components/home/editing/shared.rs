@@ -110,11 +110,9 @@ impl BufEditBehavior {
             KeyCode::Char(chr) => {
                 self.push(chr);
             }
-            KeyCode::Backspace => {
-                if !self.buf.is_empty() {
-                    let (last_char_idx, _) = self.buf.char_indices().last().expect(">0 chars");
-                    self.buf.remove(last_char_idx);
-                }
+            KeyCode::Backspace if !self.buf.is_empty() => {
+                let (last_char_idx, _) = self.buf.char_indices().last().expect(">0 chars");
+                self.buf.remove(last_char_idx);
             }
             _ => {}
         }
