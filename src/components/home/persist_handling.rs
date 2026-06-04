@@ -32,7 +32,7 @@ pub fn handle(home: &mut Home, event: Event) -> HomeAction {
             home.state = into_state(timesheet, entries);
             if home.state.items.is_empty() {
                 // Without an initial item it's not possible to add one
-                let mut item = TimeItem::new(Duration::ZERO, NaiveTime::MIN);
+                let item = TimeItem::new(Duration::ZERO, NaiveTime::MIN);
                 home.state.items.push(item);
             }
             HomeAction::SetStatusLine(format!("Loaded: {day}"))

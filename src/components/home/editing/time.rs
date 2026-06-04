@@ -4,7 +4,7 @@ use chrono::{NaiveTime, TimeDelta};
 use color_eyre::eyre::{Result, bail, eyre};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    style::{Modifier, Style, Stylize, palette::tailwind},
+    style::{Modifier, Style, palette::tailwind},
     text::Text,
     widgets::{Row, Table},
 };

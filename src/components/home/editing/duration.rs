@@ -5,7 +5,7 @@ use color_eyre::eyre::{Result, bail, eyre};
 use crossterm::event::KeyEvent;
 use humantime::parse_duration;
 use ratatui::{
-    style::{Modifier, Style, Stylize, palette::tailwind},
+    style::{Modifier, Style, palette::tailwind},
     text::Text,
     widgets::{Row, Table},
 };

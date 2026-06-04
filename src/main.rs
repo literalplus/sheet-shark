@@ -10,6 +10,7 @@ use crate::app::App;
 
 mod action;
 mod app;
+mod azure;
 mod cli;
 mod components;
 mod config;

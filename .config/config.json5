@@ -4,5 +4,20 @@
         "__dummy": {
             "internal_name": "Dummy project if nothing is configured"
         }
-    }
+    },
+    // Optional: Azure Blob Storage configuration
+    // Uncomment and fill in your credentials to enable cloud sync of JSON exports
+    // Credentials can also be provided via environment variables:
+    //   SHEET_SHARK_AZURE__ENABLED=true
+    //   SHEET_SHARK_AZURE__ACCOUNT_NAME=myaccount
+    //   SHEET_SHARK_AZURE__ACCOUNT_KEY=<your-account-key>
+    //   SHEET_SHARK_AZURE__CONTAINER_NAME=shark-exports
+    //   SHEET_SHARK_AZURE__DEBOUNCE_SECONDS=60
+    // "azure": {
+    //     "enabled": false,
+    //     "account_name": "myaccount",
+    //     "account_key": "your-account-key",
+    //     "container_name": "shark-exports",
+    //     "debounce_seconds": 60
+    // }
 }

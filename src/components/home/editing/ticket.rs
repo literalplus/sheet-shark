@@ -4,7 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use itertools::Itertools;
 use ratatui::{
     layout::Constraint,
-    style::{Modifier, Style, Stylize, palette::tailwind},
+    style::{Modifier, Style, palette::tailwind},
     text::{Line, Text},
     widgets::{ListItem, ListState, Row, Table, TableState},
 };

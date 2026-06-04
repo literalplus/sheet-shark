@@ -1,6 +1,6 @@
 use crossterm::event::KeyEvent;
 use ratatui::{
-    style::{Modifier, Style, Stylize, palette::tailwind},
+    style::{Modifier, Style, palette::tailwind},
     text::Text,
     widgets::{Row, Table},
 };

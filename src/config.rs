@@ -30,6 +30,24 @@ pub struct ProjectConfig {
     pub jira_url: Option<String>,
 }
 
+#[derive(Clone, Debug, Deserialize, Default, Serialize)]
+pub struct AzureConfig {
+    #[serde(default = "default_container_name")]
+    pub container_name: Option<String>,
+    // Containers -> shark-exports -> Settings -> SAS -> account key, Create+Write
+    pub blob_sas_url: Option<String>,
+    #[serde(default = "default_debounce_seconds")]
+    pub debounce_seconds: u64,
+}
+
+fn default_container_name() -> Option<String> {
+    Some("shark-exports".to_string())
+}
+
+fn default_debounce_seconds() -> u64 {
+    10
+}
+
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct Config {
     #[serde(default, flatten)]
@@ -37,6 +55,8 @@ pub struct Config {
     #[serde(default)]
     pub projects: HashMap<String, ProjectConfig>,
     pub default_project_key: String,
+    #[serde(default)]
+    pub azure: Option<AzureConfig>,
 }
 
 lazy_static! {

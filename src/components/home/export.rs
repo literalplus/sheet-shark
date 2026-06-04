@@ -24,8 +24,14 @@ pub fn export_timesheet(items: &[TimeItem], day: Date) -> Result<()> {
     csv::generate_csv_content(items, csv_file)?;
 
     let json_content = json::generate_json_content(items, day)?;
-    fs::write(&json_path, json_content)
+    fs::write(&json_path, json_content.as_bytes())
         .with_context(|| format!("Failed to write JSON file at {}", json_path.display()))?;
+
+    // Spawn async Azure upload task (non-blocking)
+    let json_content_clone = json_content.clone();
+    tokio::spawn(async move {
+        crate::azure::enqueue_upload(day, json_content_clone).await;
+    });
 
     Ok(())
 }
