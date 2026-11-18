@@ -65,7 +65,7 @@ impl Time {
             .start_time;
 
         if my_next_time < previous_time {
-            bail!("cannot be before previous item's start ({previous_time})")
+            bail!("cannot be before previous item's start ({previous_time})");
         }
         Ok(())
     }
@@ -83,7 +83,7 @@ impl Time {
             .start_time;
 
         if my_next_time > next_time {
-            bail!("cannot be after next item's start ({next_time})")
+            bail!("cannot be after next item's start ({next_time})");
         }
         Ok(())
     }
