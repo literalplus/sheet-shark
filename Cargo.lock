@@ -5388,9 +5388,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "type-safe-id"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd9267f90719e0433aae095640b294ff36ccbf89649ecb9ee34464ec504be157"
+checksum = "0361b099262ebd03337711ff9fda47a9a31c9ccadf12948d49cb51c797c285e3"
 dependencies = [
  "arrayvec",
  "rand 0.9.2",
