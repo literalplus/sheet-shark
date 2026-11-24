@@ -50,7 +50,7 @@ diesel_migrations = { version = "2.3.2", features = ["sqlite"] }
 type-safe-id = "0.3.4"
 time = { version = "0.3.44", features = ["local-offset", "formatting", "parsing", "macros", "serde"] }
 educe = "0.6.0"
-itertools = "0.14.0"
+itertools = "0.15.0"
 copypasta = "0.10.2"
 arc-swap = "1.9.1"
 azure_storage_blob = "1.0.0"
