@@ -154,7 +154,7 @@ fn parse_time_to_minutes(time: &str) -> Option<u32> {
 fn minutes_to_string(minutes: u32) -> String {
     let hours = minutes / 60;
     let mins = minutes % 60;
-    format!("{:02}:{:02}", hours, mins)
+    format!("{hours:02}:{mins:02}")
 }
 
 #[cfg(test)]

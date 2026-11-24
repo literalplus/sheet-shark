@@ -107,12 +107,11 @@ impl<'a> TimesheetSummaryPanel<'a> {
 
         // Add start and end times if available
         if let (Some(start), Some(end)) = (&self.summary.start_time, &self.summary.end_time) {
-            text.push_str(&format!("{} - {} | ", start, end));
+            text.push_str(&format!("{start} - {end} | "));
         }
 
         text.push_str(&format!(
-            "Working time: {} | Break: {}",
-            formatted_duration, formatted_break_duration
+            "Working time: {formatted_duration} | Break: {formatted_break_duration}"
         ));
 
         Paragraph::new(text)

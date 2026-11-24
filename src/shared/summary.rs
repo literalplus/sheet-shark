@@ -123,7 +123,7 @@ impl TimesheetSummary {
                             let end_minutes = start_minutes + entry.duration_mins as u32;
                             let end_hours = end_minutes / 60;
                             let end_mins = end_minutes % 60;
-                            Some(format!("{:02}:{:02}", end_hours, end_mins))
+                            Some(format!("{end_hours:02}:{end_mins:02}"))
                         } else {
                             None
                         }

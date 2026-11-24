@@ -29,8 +29,19 @@ pub struct AppConfig {
 pub struct ProjectConfig {
     pub internal_name: String,
     pub jira_url: Option<String>,
+    #[serde(default)]
+    pub mode: ProjectMode,
     #[serde(default, deserialize_with = "deserialize_valid_from")]
     pub valid_from: Option<Date>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+pub enum ProjectMode {
+    #[default]
+    #[serde(rename = "KEY_ONLY")]
+    KeyOnly,
+    #[serde(rename = "KEY_COMMA_COMMENT")]
+    KeyCommaComment,
 }
 
 const ISO_LOCAL_DATE: &[FormatItem<'static>] = format_description!("[year]-[month]-[day]");
@@ -230,6 +241,30 @@ impl Config {
     }
 }
 
+pub fn get_data_dir() -> PathBuf {
+    if let Some(s) = DATA_FOLDER.clone() {
+        s
+    } else if let Some(proj_dirs) = project_directory() {
+        proj_dirs.data_local_dir().to_path_buf()
+    } else {
+        PathBuf::from(".").join(".data")
+    }
+}
+
+pub fn get_config_dir() -> PathBuf {
+    if let Some(s) = CONFIG_FOLDER.clone() {
+        s
+    } else if let Some(proj_dirs) = project_directory() {
+        proj_dirs.config_local_dir().to_path_buf()
+    } else {
+        PathBuf::from(".").join(".config")
+    }
+}
+
+fn project_directory() -> Option<ProjectDirs> {
+    ProjectDirs::from("plus.lit", "", env!("CARGO_PKG_NAME"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,10 +279,27 @@ mod tests {
 
         let project = config.project_for_day("E", date!(1900 - 01 - 01)).unwrap();
         assert_eq!(project.internal_name, "Example");
+        assert_eq!(project.mode, ProjectMode::KeyOnly);
         assert!(
             config
                 .project_for_day("missing", date!(2026 - 01 - 01))
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn parses_project_export_mode() {
+        let config = Config::from_yaml(
+            "default_project_key: E\nprojects:\n  E:\n    internal_name: Example\n    mode: KEY_COMMA_COMMENT\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            config
+                .project_for_day("E", date!(2026 - 01 - 01))
+                .unwrap()
+                .mode,
+            ProjectMode::KeyCommaComment
         );
     }
 
@@ -317,28 +369,4 @@ mod tests {
 
         assert!(config.is_err());
     }
-}
-
-pub fn get_data_dir() -> PathBuf {
-    if let Some(s) = DATA_FOLDER.clone() {
-        s
-    } else if let Some(proj_dirs) = project_directory() {
-        proj_dirs.data_local_dir().to_path_buf()
-    } else {
-        PathBuf::from(".").join(".data")
-    }
-}
-
-pub fn get_config_dir() -> PathBuf {
-    if let Some(s) = CONFIG_FOLDER.clone() {
-        s
-    } else if let Some(proj_dirs) = project_directory() {
-        proj_dirs.config_local_dir().to_path_buf()
-    } else {
-        PathBuf::from(".").join(".config")
-    }
-}
-
-fn project_directory() -> Option<ProjectDirs> {
-    ProjectDirs::from("plus.lit", "", env!("CARGO_PKG_NAME"))
 }

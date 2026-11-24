@@ -144,6 +144,7 @@ mod tests {
                 vec![crate::config::ProjectConfig {
                     internal_name: "Test Project".to_string(),
                     jira_url: Some("https://test.atlassian.net".to_string()),
+                    mode: crate::config::ProjectMode::KeyOnly,
                     valid_from: None,
                 }],
             );
@@ -152,6 +153,7 @@ mod tests {
                 vec![crate::config::ProjectConfig {
                     internal_name: "Work Project".to_string(),
                     jira_url: None,
+                    mode: crate::config::ProjectMode::KeyOnly,
                     valid_from: None,
                 }],
             );
