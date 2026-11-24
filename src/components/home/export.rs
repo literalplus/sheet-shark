@@ -6,7 +6,6 @@ use time::Date;
 use crate::{
     components::home::state::TimeItem,
     config::{Config, ProjectMode, get_data_dir},
-    shared::BREAK_PROJECT_KEY,
 };
 
 pub mod csv;
@@ -22,7 +21,7 @@ pub fn export_timesheet(items: &[TimeItem], day: Date) -> Result<()> {
 
     let csv_file = fs::File::create(&csv_path)
         .with_context(|| format!("Failed to create CSV file at {}", csv_path.display()))?;
-    csv::generate_csv_content(items, day, csv_file)?;
+    csv::generate_csv_content(items, csv_file)?;
 
     let json_content = json::generate_json_content(items, day)?;
     fs::write(&json_path, json_content.as_bytes())
@@ -61,21 +60,20 @@ pub(super) fn get_project_key(project: &str) -> String {
     }
 }
 
-pub(super) fn format_project_key(
+pub(super) fn format_json_description(
     project_key: &str,
     comment: &str,
     day: Date,
     config: &Config,
 ) -> String {
-    if project_key == BREAK_PROJECT_KEY
-        || comment.is_empty()
-        || comment.starts_with('.')
-        || config
-            .project_for_day(project_key, day)
-            .is_none_or(|project| project.mode == ProjectMode::KeyOnly)
+    match config
+        .project_for_day(project_key, day)
+        .map(|project| project.mode)
     {
-        project_key.to_string()
-    } else {
-        format!("{project_key}, {comment}")
+        Some(ProjectMode::KeyCommaComment) if comment.starts_with('.') => project_key.to_string(),
+        Some(ProjectMode::KeyCommaComment) if !comment.is_empty() => {
+            format!("{project_key}, {comment}")
+        }
+        _ => comment.to_string(),
     }
 }

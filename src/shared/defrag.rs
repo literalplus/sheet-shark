@@ -159,7 +159,7 @@ fn minutes_to_string(minutes: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::Config;
+    use crate::config::{Config, ProjectConfig, ProjectMode};
 
     use super::*;
     use crate::persist::TimeEntry;
@@ -294,5 +294,83 @@ mod tests {
         assert_eq!(result[1].ticket_key, "TICKET-1");
         assert_eq!(result[1].start_time, "11:00"); // Resume after break
         assert_eq!(result[1].end_time, "12:30"); // 90 remaining minutes
+    }
+
+    #[test]
+    fn comment_mode_groups_by_ticket_and_normalized_comment() {
+        Config::set_for_tests(Config {
+            projects: [(
+                "M11".to_string(),
+                vec![ProjectConfig {
+                    internal_name: "Module 11".to_string(),
+                    jira_url: None,
+                    mode: ProjectMode::KeyCommaComment,
+                    valid_from: None,
+                }],
+            )]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        });
+
+        let entries = [
+            ("1", "09:00", 30, "implementation work"),
+            ("2", "09:30", 20, ".private note"),
+            ("3", "09:50", 10, ""),
+            ("4", "10:00", 15, "code review"),
+        ]
+        .into_iter()
+        .map(|(id, start_time, duration_mins, description)| TimeEntry {
+            id: id.to_string(),
+            timesheet_day: "2026-01-08".to_string(),
+            start_time: start_time.to_string(),
+            duration_mins,
+            project_key: "M11".to_string(),
+            ticket_key: Some("MGA-1821".to_string()),
+            description: description.to_string(),
+        })
+        .collect();
+        let summary = TimesheetSummary::new(entries, time::macros::date!(2026 - 01 - 08));
+        let ticket_sums = &summary.projects["M11"].ticket_sums;
+        assert_eq!(ticket_sums.len(), 3);
+        assert_eq!(
+            ticket_sums["MGA-1821, implementation work"].whole_minutes(),
+            30
+        );
+        assert_eq!(ticket_sums["MGA-1821"].whole_minutes(), 30);
+        assert_eq!(ticket_sums["MGA-1821, code review"].whole_minutes(), 15);
+
+        let result = calculate(&summary);
+
+        assert_eq!(result.len(), 3);
+        let ticket_keys: std::collections::HashSet<_> = result
+            .iter()
+            .map(|entry| entry.ticket_key.as_str())
+            .collect();
+        assert_eq!(
+            ticket_keys,
+            [
+                "MGA-1821, implementation work",
+                "MGA-1821",
+                "MGA-1821, code review",
+            ]
+            .into_iter()
+            .collect()
+        );
+        assert!(result.iter().all(|entry| entry.project_key == "M11"));
+
+        // Empty and dot-prefixed comments share one normalized group (30 minutes).
+        let empty_comment_entry = result
+            .iter()
+            .find(|entry| entry.ticket_key == "MGA-1821")
+            .unwrap();
+        let minutes = |time: &str| {
+            let (hours, minutes) = time.split_once(':').unwrap();
+            hours.parse::<u32>().unwrap() * 60 + minutes.parse::<u32>().unwrap()
+        };
+        assert_eq!(
+            minutes(&empty_comment_entry.end_time) - minutes(&empty_comment_entry.start_time),
+            30
+        );
     }
 }

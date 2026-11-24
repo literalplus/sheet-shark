@@ -6,7 +6,7 @@ use time::Date;
 
 use crate::{components::home::state::TimeItem, config::Config, shared::BREAK_PROJECT_KEY};
 
-use super::{format_project_key, get_project_key};
+use super::{format_json_description, get_project_key};
 
 #[derive(Serialize)]
 struct JsonExport {
@@ -107,14 +107,14 @@ fn generate_json_content_with_config(
             JsonEntry {
                 start: start_time.format("%H:%M").to_string(),
                 end: end_time.format("%H:%M").to_string(),
-                project_key: format_project_key(&project_key, &item.description, day, config),
+                project_key: project_key.clone(),
                 ticket: if item.ticket.is_empty() {
                     None
                 } else {
                     Some(item.ticket.clone())
                 },
                 duration_mins,
-                description: item.description.clone(),
+                description: format_json_description(&project_key, &item.description, day, config),
             }
         })
         .collect();
@@ -265,7 +265,7 @@ mod tests {
     }
 
     #[test]
-    fn exports_project_key_with_comment_when_configured() {
+    fn exports_comment_using_configured_project_mode() {
         let config = Config {
             default_project_key: "DEFAULT".to_string(),
             projects: [(
@@ -291,10 +291,10 @@ mod tests {
         let json_value: serde_json::Value = serde_json::from_str(&json_content).unwrap();
         let entries = json_value["entries"].as_array().unwrap();
 
-        assert_eq!(entries[0]["project_key"], "PROJECT-1, implementation");
+        assert_eq!(entries[0]["project_key"], "PROJECT-1");
         assert_eq!(entries[1]["project_key"], "PROJECT-1");
-        assert_eq!(entries[0]["description"], "implementation");
-        assert_eq!(entries[1]["description"], ".internal note");
+        assert_eq!(entries[0]["description"], "PROJECT-1, implementation");
+        assert_eq!(entries[1]["description"], "PROJECT-1");
         assert!(json_value["projects"]["PROJECT-1"].is_object());
     }
 

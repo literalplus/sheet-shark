@@ -89,9 +89,26 @@ impl TimesheetSummary {
                 project_summary.first_start = Some(entry.start_time.clone());
             }
 
+            let ticket_sum_key =
+                if project_summary.config.as_ref().is_some_and(|config| {
+                    config.mode == crate::config::ProjectMode::KeyCommaComment
+                }) {
+                    let comment = if entry.description.starts_with('.') {
+                        String::new()
+                    } else {
+                        entry.description.clone()
+                    };
+                    if comment.is_empty() {
+                        ticket
+                    } else {
+                        format!("{ticket}, {comment}")
+                    }
+                } else {
+                    ticket
+                };
             *project_summary
                 .ticket_sums
-                .entry(ticket)
+                .entry(ticket_sum_key)
                 .or_insert(Duration::ZERO) += duration;
         }
 
