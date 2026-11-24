@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use serde::Serialize;
-use time::Duration;
+use time::{Date, Duration};
 
 use crate::{
     config::{Config, ProjectConfig},
@@ -50,7 +50,7 @@ pub struct SummaryJson {
 }
 
 impl TimesheetSummary {
-    pub fn new(entries: Vec<TimeEntry>) -> Self {
+    pub fn new(entries: Vec<TimeEntry>, day: Date) -> Self {
         let config = Config::get_quick();
         let mut projects: HashMap<String, ProjectSummary> = HashMap::new();
 
@@ -78,7 +78,7 @@ impl TimesheetSummary {
 
             let project_summary = projects
                 .entry(project_key.clone())
-                .or_insert_with(|| Self::create_project_summary(project_key, &config));
+                .or_insert_with(|| Self::create_project_summary(project_key, &config, day));
 
             // Track the earliest start time for this project
             if let Some(current_first) = &project_summary.first_start {
@@ -142,8 +142,8 @@ impl TimesheetSummary {
         }
     }
 
-    fn create_project_summary(project_key: &str, config: &Config) -> ProjectSummary {
-        let project_config = config.projects.get(project_key).cloned();
+    fn create_project_summary(project_key: &str, config: &Config, day: Date) -> ProjectSummary {
+        let project_config = config.project_for_day(project_key, day);
 
         ProjectSummary {
             config: project_config,
@@ -170,8 +170,8 @@ impl TimesheetSummary {
 
 impl SummaryJson {
     /// Creates a SummaryJson from entries, calculating both the summary and defragmented timeline
-    pub fn from_entries(entries: Vec<TimeEntry>) -> Self {
-        let summary = TimesheetSummary::new(entries);
+    pub fn from_entries(entries: Vec<TimeEntry>, day: Date) -> Self {
+        let summary = TimesheetSummary::new(entries, day);
         let defragmented = defrag::calculate(&summary);
 
         Self {

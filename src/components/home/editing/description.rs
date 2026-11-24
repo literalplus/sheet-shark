@@ -4,6 +4,7 @@ use ratatui::{
     text::Text,
     widgets::{Row, Table},
 };
+use time::Date;
 use tracing::info;
 
 use super::EditModeBehavior;
@@ -41,8 +42,8 @@ impl EditModeBehavior for Description {
         self.buf.handle_key_event(state, key)
     }
 
-    fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
-        let mut cells = item.as_cells(false).clone();
+    fn style_selected_item<'a>(&self, item: &'a TimeItem, day: Date) -> Row<'a> {
+        let mut cells = item.as_cells(false, day).clone();
         cells[3] = Text::from(self.buf.to_owned());
         Row::new(cells)
     }

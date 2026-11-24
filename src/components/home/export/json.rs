@@ -70,8 +70,8 @@ pub fn generate_json_content(items: &[TimeItem], day: Date) -> Result<String> {
     let projects = used_projects
         .into_iter()
         .map(|project_key| {
-            let config = config.projects.get(&project_key);
-            let internal_name = if let Some(config) = config {
+            let config = config.project_for_day(&project_key, day);
+            let internal_name = if let Some(config) = config.as_ref() {
                 config.internal_name.clone()
             } else {
                 project_key.clone()
@@ -141,17 +141,19 @@ mod tests {
             let mut projects = std::collections::HashMap::new();
             projects.insert(
                 "TEST-PROJECT".to_string(),
-                crate::config::ProjectConfig {
+                vec![crate::config::ProjectConfig {
                     internal_name: "Test Project".to_string(),
                     jira_url: Some("https://test.atlassian.net".to_string()),
-                },
+                    valid_from: None,
+                }],
             );
             projects.insert(
                 "W".to_string(),
-                crate::config::ProjectConfig {
+                vec![crate::config::ProjectConfig {
                     internal_name: "Work Project".to_string(),
                     jira_url: None,
-                },
+                    valid_from: None,
+                }],
             );
 
             let test_config = Config {

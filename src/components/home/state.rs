@@ -95,12 +95,16 @@ impl TryFrom<&persist::TimeEntry> for TimeItem {
 pub const TIME_ITEM_WIDTH: usize = 5;
 
 impl TimeItem {
-    pub fn as_row<'a>(&'a self, mark_as_mismatch: bool) -> Row<'a> {
-        Row::new(self.as_cells(mark_as_mismatch))
+    pub fn as_row<'a>(&'a self, mark_as_mismatch: bool, day: time::Date) -> Row<'a> {
+        Row::new(self.as_cells(mark_as_mismatch, day))
     }
 
     /// Needed because ratatui's Row doesn't expose its contents
-    pub fn as_cells<'a>(&'a self, mark_as_mismatch: bool) -> [Text<'a>; TIME_ITEM_WIDTH] {
+    pub fn as_cells<'a>(
+        &'a self,
+        mark_as_mismatch: bool,
+        day: time::Date,
+    ) -> [Text<'a>; TIME_ITEM_WIDTH] {
         let formatted_duration = if self.duration.is_zero() {
             "".to_string()
         } else {
@@ -119,7 +123,9 @@ impl TimeItem {
             &self.project
         };
         let is_project_configured = project_key == BREAK_PROJECT_KEY
-            || Config::get_longterm().projects.contains_key(project_key);
+            || Config::get_longterm()
+                .project_for_day(project_key, day)
+                .is_some();
         let project_style = if !is_project_configured && !self.project.is_empty() {
             Style::default().fg(tailwind::RED.c500)
         } else {

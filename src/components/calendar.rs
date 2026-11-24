@@ -64,7 +64,7 @@ impl Component for Calendar {
             KeyCode::Enter => Ok(Some(Action::SetActivePage(Page::Home { day: self.day }))),
             KeyCode::Char('c') => {
                 if let Some(_summary) = &self.summary {
-                    let summary_json = SummaryJson::from_entries(self.entries.clone());
+                    let summary_json = SummaryJson::from_entries(self.entries.clone(), self.day);
                     let json = serde_json::to_string(&summary_json)
                         .context("serializing timesheet summary")?;
                     let mut clip = CLIPBOARD.lock().expect("clipboard mutex not poisoned");
@@ -114,7 +114,12 @@ impl Component for Calendar {
                 }
             }
             KeyCode::Char('r') => match crate::config::Config::reload() {
-                Ok(_) => Ok(Some(Action::SetStatusLine("Config reloaded!".into()))),
+                Ok(_) => {
+                    if self.summary.is_some() {
+                        self.summary = Some(TimesheetSummary::new(self.entries.clone(), self.day));
+                    }
+                    Ok(Some(Action::SetStatusLine("Config reloaded!".into())))
+                }
                 Err(e) => Ok(Some(Action::SetStatusLine(format!(
                     "Failed to reload config: {e}"
                 )))),
@@ -150,7 +155,7 @@ impl Component for Calendar {
                 entries,
             } if day == self.day => {
                 self.entries = entries.clone();
-                self.summary = Some(TimesheetSummary::new(entries));
+                self.summary = Some(TimesheetSummary::new(entries, day));
             }
             _ => {}
         }
