@@ -21,7 +21,7 @@ pub(super) fn draw(home: &mut Home, frame: &mut Frame, area: Rect) -> Result<()>
     let state = &mut home.state;
 
     let selected_idx = state.table.selected();
-    let table = draw_table(&state.items, selected_idx, &home.edit_mode);
+    let table = draw_table(&state.items, selected_idx, &home.edit_mode, home.day);
     frame.render_stateful_widget(table, area, &mut state.table);
 
     if let Some(edit_mode) = &mut home.edit_mode
@@ -61,12 +61,14 @@ fn draw_table<'a>(
     items: &'a [TimeItem],
     selected_idx: Option<usize>,
     edit_mode: &Option<EditMode>,
+    day: time::Date,
 ) -> Table<'a> {
     let mismatching_idxs = mark_mismatching_items(items);
-    let rows = items
-        .iter()
-        .enumerate()
-        .map(draw_item(selected_idx, edit_mode, &mismatching_idxs));
+    let rows =
+        items
+            .iter()
+            .enumerate()
+            .map(draw_item(selected_idx, edit_mode, &mismatching_idxs, day));
 
     let header = TABLE_HEADERS
         .into_iter()
@@ -94,24 +96,25 @@ fn draw_item(
     selected_idx: Option<usize>,
     edit_mode: &Option<EditMode>,
     mismatching_idxs: &[usize],
+    day: time::Date,
 ) -> impl Fn((usize, &TimeItem)) -> Row {
     move |(i, item)| -> Row {
         let is_selected = Some(i) == selected_idx;
         if is_selected && let Some(edit_mode) = edit_mode {
-            edit_mode.style_selected_item(item)
+            edit_mode.style_selected_item(item, day)
         } else {
-            create_row_for_item(i, item, mismatching_idxs.contains(&i))
+            create_row_for_item(i, item, mismatching_idxs.contains(&i), day)
         }
     }
 }
 
-fn create_row_for_item(i: usize, item: &TimeItem, is_mismatch: bool) -> Row<'_> {
+fn create_row_for_item(i: usize, item: &TimeItem, is_mismatch: bool, day: time::Date) -> Row<'_> {
     if item.project == BREAK_PROJECT_KEY {
-        let mut cells = item.as_cells(is_mismatch);
+        let mut cells = item.as_cells(is_mismatch, day);
         cells[2] = "🏖️🏖️🏖️".into();
         Row::new(cells).bg(tailwind::EMERALD.c900)
     } else {
-        zebra_stripe(i, item.as_row(is_mismatch))
+        zebra_stripe(i, item.as_row(is_mismatch, day))
     }
 }
 

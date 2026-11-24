@@ -1,2 +1,4 @@
 /target
 .data/*.log
+.clfbox.toml
+.mise.clfbox.toml

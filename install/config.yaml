@@ -2,3 +2,5 @@ default_project_key: E
 projects:
   E:
     internal_name: "Example!"
+    # Optional export mode: KEY_ONLY (default) or KEY_COMMA_COMMENT
+    # mode: KEY_COMMA_COMMENT

@@ -154,7 +154,7 @@ fn parse_time_to_minutes(time: &str) -> Option<u32> {
 fn minutes_to_string(minutes: u32) -> String {
     let hours = minutes / 60;
     let mins = minutes % 60;
-    format!("{:02}:{:02}", hours, mins)
+    format!("{hours:02}:{mins:02}")
 }
 
 #[cfg(test)]
@@ -188,7 +188,7 @@ mod tests {
             },
         ];
 
-        let summary = TimesheetSummary::new(entries);
+        let summary = TimesheetSummary::new(entries, time::macros::date!(2026 - 01 - 08));
         let result = calculate(&summary);
 
         assert_eq!(result.len(), 2); // Now we have 2 separate entries
@@ -239,7 +239,7 @@ mod tests {
             },
         ];
 
-        let summary = TimesheetSummary::new(entries);
+        let summary = TimesheetSummary::new(entries, time::macros::date!(2026 - 01 - 08));
         let result = calculate(&summary);
 
         // Should have 2 entries: PROJECT1 before break, PROJECT2 after break
@@ -282,7 +282,7 @@ mod tests {
             },
         ];
 
-        let summary = TimesheetSummary::new(entries);
+        let summary = TimesheetSummary::new(entries, time::macros::date!(2026 - 01 - 08));
         let result = calculate(&summary);
 
         assert_eq!(result.len(), 2);

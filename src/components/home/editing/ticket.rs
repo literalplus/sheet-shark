@@ -8,6 +8,7 @@ use ratatui::{
     text::{Line, Text},
     widgets::{ListItem, ListState, Row, Table, TableState},
 };
+use time::Date;
 
 use super::EditModeBehavior;
 use crate::{
@@ -59,8 +60,8 @@ impl EditModeBehavior for Ticket {
         }
     }
 
-    fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
-        let mut cells = item.as_cells(false).clone();
+    fn style_selected_item<'a>(&self, item: &'a TimeItem, day: Date) -> Row<'a> {
+        let mut cells = item.as_cells(false, day).clone();
         cells[2] = Text::from(self.buf.to_owned());
         Row::new(cells)
     }

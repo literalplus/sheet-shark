@@ -4,6 +4,7 @@ use ratatui::{
     text::Text,
     widgets::{Row, Table},
 };
+use time::Date;
 
 use super::EditModeBehavior;
 use crate::components::home::{
@@ -33,8 +34,8 @@ impl EditModeBehavior for Project {
         self.buf.handle_key_event(state, key)
     }
 
-    fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
-        let mut cells = item.as_cells(false).clone();
+    fn style_selected_item<'a>(&self, item: &'a TimeItem, day: Date) -> Row<'a> {
+        let mut cells = item.as_cells(false, day).clone();
         cells[1] = Text::from(self.buf.to_owned());
         Row::new(cells)
     }

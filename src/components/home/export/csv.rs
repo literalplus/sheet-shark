@@ -4,12 +4,20 @@ use chrono::{NaiveTime, Timelike};
 use color_eyre::{Result, eyre::Context};
 use csv::WriterBuilder;
 
-use crate::{components::home::state::TimeItem, shared::BREAK_PROJECT_KEY};
+use crate::{
+    components::home::state::TimeItem,
+    config::{Config, ProjectMode},
+    shared::BREAK_PROJECT_KEY,
+};
 
 use super::get_project_key;
 
 /// Generate CSV content in LibreOffice Calc compatible format
-pub fn generate_csv_content<W: Write>(items: &[TimeItem], writer: W) -> Result<()> {
+pub fn generate_csv_content<W: Write>(
+    items: &[TimeItem],
+    day: time::Date,
+    writer: W,
+) -> Result<()> {
     let mut csv_writer = WriterBuilder::new().has_headers(false).from_writer(writer);
 
     write_csv_header(&mut csv_writer)?;
@@ -22,12 +30,16 @@ pub fn generate_csv_content<W: Write>(items: &[TimeItem], writer: W) -> Result<(
             let start_time = item.start_time;
             let end_time = item.next_start_time();
             let project_key = get_project_key(&item.project);
+            let mode = Config::get_quick()
+                .project_for_day(&project_key, day)
+                .map_or(ProjectMode::KeyOnly, |project| project.mode);
+            let display_project = format_project_comment(&project_key, &item.description, mode);
 
             write_csv_record(
                 &mut csv_writer,
                 start_time,
                 end_time,
-                &project_key,
+                &display_project,
                 &item.ticket,
                 &item.description,
                 item.duration.as_secs(),
@@ -36,6 +48,21 @@ pub fn generate_csv_content<W: Write>(items: &[TimeItem], writer: W) -> Result<(
 
     csv_writer.flush().context("Failed to flush CSV writer")?;
     Ok(())
+}
+
+fn format_project_comment(project_key: &str, comment: &str, mode: ProjectMode) -> String {
+    if project_key == BREAK_PROJECT_KEY
+        || mode == ProjectMode::KeyOnly
+        || comment.is_empty()
+        || comment.starts_with('.')
+    {
+        return project_key.to_string();
+    }
+
+    match mode {
+        ProjectMode::KeyOnly => project_key.to_string(),
+        ProjectMode::KeyCommaComment => format!("{project_key}, {comment}"),
+    }
 }
 
 /// Write the CSV header row with all required columns for LibreOffice Calc
@@ -129,17 +156,21 @@ mod tests {
             let mut projects = std::collections::HashMap::new();
             projects.insert(
                 "TEST-PROJECT".to_string(),
-                crate::config::ProjectConfig {
+                vec![crate::config::ProjectConfig {
                     internal_name: "Test Project".to_string(),
                     jira_url: Some("https://test.atlassian.net".to_string()),
-                },
+                    mode: ProjectMode::KeyOnly,
+                    valid_from: None,
+                }],
             );
             projects.insert(
                 "W".to_string(),
-                crate::config::ProjectConfig {
+                vec![crate::config::ProjectConfig {
                     internal_name: "Work Project".to_string(),
                     jira_url: None,
-                },
+                    mode: ProjectMode::KeyOnly,
+                    valid_from: None,
+                }],
             );
 
             let test_config = crate::config::Config {
@@ -184,7 +215,7 @@ mod tests {
         ];
 
         let mut output = Vec::new();
-        generate_csv_content(&items, &mut output).unwrap();
+        generate_csv_content(&items, time::macros::date!(2025 - 09 - 22), &mut output).unwrap();
 
         let csv_string = String::from_utf8(output).unwrap();
         let lines: Vec<&str> = csv_string.lines().collect();
@@ -224,7 +255,7 @@ mod tests {
         let items = vec![create_test_item(12, 5, 50, "x", "", "lunch break")];
 
         let mut output = Vec::new();
-        generate_csv_content(&items, &mut output).unwrap();
+        generate_csv_content(&items, time::macros::date!(2025 - 09 - 22), &mut output).unwrap();
 
         let csv_string = String::from_utf8(output).unwrap();
         let lines: Vec<&str> = csv_string.lines().collect();
@@ -252,7 +283,7 @@ mod tests {
         ];
 
         let mut output = Vec::new();
-        generate_csv_content(&items, &mut output).unwrap();
+        generate_csv_content(&items, time::macros::date!(2025 - 09 - 22), &mut output).unwrap();
 
         let csv_string = String::from_utf8(output).unwrap();
         let lines: Vec<&str> = csv_string.lines().collect();
@@ -274,6 +305,26 @@ mod tests {
     }
 
     #[test]
+    fn test_project_comment_formatting() {
+        assert_eq!(
+            format_project_comment(
+                "PROJECT-1",
+                "worked on feature",
+                ProjectMode::KeyCommaComment
+            ),
+            "PROJECT-1, worked on feature"
+        );
+        assert_eq!(
+            format_project_comment("PROJECT-1", ".internal note", ProjectMode::KeyCommaComment),
+            "PROJECT-1"
+        );
+        assert_eq!(
+            format_project_comment("PROJECT-1", "worked on feature", ProjectMode::KeyOnly),
+            "PROJECT-1"
+        );
+    }
+
+    #[test]
     fn test_csv_format_structure() {
         setup_test_config();
 
@@ -287,7 +338,7 @@ mod tests {
         )];
 
         let mut output = Vec::new();
-        generate_csv_content(&items, &mut output).unwrap();
+        generate_csv_content(&items, time::macros::date!(2025 - 09 - 22), &mut output).unwrap();
 
         let csv_string = String::from_utf8(output).unwrap();
         let lines: Vec<&str> = csv_string.lines().collect();

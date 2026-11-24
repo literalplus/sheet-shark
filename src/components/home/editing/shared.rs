@@ -6,6 +6,7 @@ use ratatui::{
     layout::Constraint,
     widgets::{Row, Table, TableState},
 };
+use time::Date;
 
 use crate::{
     components::home::{
@@ -22,8 +23,8 @@ use crate::{
 pub trait EditModeBehavior {
     fn handle_key_event(&mut self, state: &mut HomeState, key: KeyEvent) -> HomeAction;
     fn style_table<'a>(&self, table: Table<'a>) -> Table<'a>;
-    fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
-        item.as_row(false)
+    fn style_selected_item<'a>(&self, item: &'a TimeItem, day: Date) -> Row<'a> {
+        item.as_row(false, day)
     }
     fn draw_popup<'a, CI>(
         &'a mut self,

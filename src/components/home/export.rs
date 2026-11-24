@@ -21,7 +21,7 @@ pub fn export_timesheet(items: &[TimeItem], day: Date) -> Result<()> {
 
     let csv_file = fs::File::create(&csv_path)
         .with_context(|| format!("Failed to create CSV file at {}", csv_path.display()))?;
-    csv::generate_csv_content(items, csv_file)?;
+    csv::generate_csv_content(items, day, csv_file)?;
 
     let json_content = json::generate_json_content(items, day)?;
     fs::write(&json_path, json_content.as_bytes())

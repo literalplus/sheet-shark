@@ -8,6 +8,7 @@ use ratatui::{
     text::Text,
     widgets::{Row, Table},
 };
+use time::Date;
 
 use super::EditModeBehavior;
 use crate::components::home::{
@@ -142,8 +143,8 @@ impl EditModeBehavior for Time {
         }
     }
 
-    fn style_selected_item<'a>(&self, item: &'a TimeItem) -> Row<'a> {
-        let mut cells = item.as_cells(false).clone();
+    fn style_selected_item<'a>(&self, item: &'a TimeItem, day: Date) -> Row<'a> {
+        let mut cells = item.as_cells(false, day).clone();
         let mut content = self.buf.to_owned();
         if content.is_empty() {
             content = format!("{}", item.start_time.format("%H%M"));
