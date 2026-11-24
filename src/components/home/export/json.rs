@@ -6,7 +6,7 @@ use time::Date;
 
 use crate::{components::home::state::TimeItem, config::Config, shared::BREAK_PROJECT_KEY};
 
-use super::get_project_key;
+use super::{format_project_key, get_project_key};
 
 #[derive(Serialize)]
 struct JsonExport {
@@ -48,8 +48,14 @@ struct JsonEntry {
 }
 
 pub fn generate_json_content(items: &[TimeItem], day: Date) -> Result<String> {
-    let config = Config::get_quick();
+    generate_json_content_with_config(items, day, &Config::get_longterm())
+}
 
+fn generate_json_content_with_config(
+    items: &[TimeItem],
+    day: Date,
+    config: &Config,
+) -> Result<String> {
     let meta = JsonMeta {
         day: day.to_string(),
         exported_at: chrono::Utc::now().to_rfc3339(),
@@ -70,13 +76,13 @@ pub fn generate_json_content(items: &[TimeItem], day: Date) -> Result<String> {
     let projects = used_projects
         .into_iter()
         .map(|project_key| {
-            let config = config.project_for_day(&project_key, day);
-            let internal_name = if let Some(config) = config.as_ref() {
-                config.internal_name.clone()
+            let project_config = config.project_for_day(&project_key, day);
+            let internal_name = if let Some(project_config) = project_config.as_ref() {
+                project_config.internal_name.clone()
             } else {
                 project_key.clone()
             };
-            let kind = match config {
+            let kind = match project_config {
                 _ if project_key == BREAK_PROJECT_KEY => ProjectKind::SpecialBreak,
                 Some(_) => ProjectKind::Configured,
                 _ => ProjectKind::AdHoc,
@@ -101,7 +107,7 @@ pub fn generate_json_content(items: &[TimeItem], day: Date) -> Result<String> {
             JsonEntry {
                 start: start_time.format("%H:%M").to_string(),
                 end: end_time.format("%H:%M").to_string(),
-                project_key,
+                project_key: format_project_key(&project_key, &item.description, day, config),
                 ticket: if item.ticket.is_empty() {
                     None
                 } else {
@@ -256,6 +262,40 @@ mod tests {
 
         assert_eq!(entries[0]["project_key"], "x");
         assert!(entries[0]["ticket"].is_null());
+    }
+
+    #[test]
+    fn exports_project_key_with_comment_when_configured() {
+        let config = Config {
+            default_project_key: "DEFAULT".to_string(),
+            projects: [(
+                "PROJECT-1".to_string(),
+                vec![crate::config::ProjectConfig {
+                    internal_name: "Example".to_string(),
+                    jira_url: None,
+                    mode: crate::config::ProjectMode::KeyCommaComment,
+                    valid_from: None,
+                }],
+            )]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        };
+        let items = vec![
+            create_test_item(8, 0, 30, "PROJECT-1", "TASK-1", "implementation"),
+            create_test_item(8, 30, 30, "PROJECT-1", "TASK-2", ".internal note"),
+        ];
+
+        let json_content =
+            generate_json_content_with_config(&items, date!(2025 - 09 - 22), &config).unwrap();
+        let json_value: serde_json::Value = serde_json::from_str(&json_content).unwrap();
+        let entries = json_value["entries"].as_array().unwrap();
+
+        assert_eq!(entries[0]["project_key"], "PROJECT-1, implementation");
+        assert_eq!(entries[1]["project_key"], "PROJECT-1");
+        assert_eq!(entries[0]["description"], "implementation");
+        assert_eq!(entries[1]["description"], ".internal note");
+        assert!(json_value["projects"]["PROJECT-1"].is_object());
     }
 
     #[test]

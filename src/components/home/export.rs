@@ -5,7 +5,8 @@ use time::Date;
 
 use crate::{
     components::home::state::TimeItem,
-    config::{Config, get_data_dir},
+    config::{Config, ProjectMode, get_data_dir},
+    shared::BREAK_PROJECT_KEY,
 };
 
 pub mod csv;
@@ -57,5 +58,24 @@ pub(super) fn get_project_key(project: &str) -> String {
         Config::get_quick().default_project_key.clone()
     } else {
         project.to_string()
+    }
+}
+
+pub(super) fn format_project_key(
+    project_key: &str,
+    comment: &str,
+    day: Date,
+    config: &Config,
+) -> String {
+    if project_key == BREAK_PROJECT_KEY
+        || comment.is_empty()
+        || comment.starts_with('.')
+        || config
+            .project_for_day(project_key, day)
+            .is_none_or(|project| project.mode == ProjectMode::KeyOnly)
+    {
+        project_key.to_string()
+    } else {
+        format!("{project_key}, {comment}")
     }
 }
