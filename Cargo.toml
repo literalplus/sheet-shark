@@ -59,4 +59,4 @@ azure_core = "1.0.0"
 
 [build-dependencies]
 anyhow     = "1.0.104"
-vergen-gix = { version = "1.0.2", features = ["build", "cargo"] }
+vergen-gix = { version = "10.0.0", features = ["build", "cargo"] }
